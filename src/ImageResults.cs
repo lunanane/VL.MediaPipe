@@ -6,7 +6,7 @@
         public Resolution Resolution { get; set; }
     }
 
-    public class Imageresults
+    public partial class Imageresults
     {
         public Classification[] Classifications { get; set; }
         public int TimestampMs { get; set; }

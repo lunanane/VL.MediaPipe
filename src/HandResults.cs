@@ -32,7 +32,7 @@
         public Resolution Resolution { get; set; }
     }
 
-    public class Handresults
+    public partial class Handresults
     {
         public Landmark[][] Landmarks { get; set; }
         public Worldlandmark[][] WorldLandmarks { get; set; }

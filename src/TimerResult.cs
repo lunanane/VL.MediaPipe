@@ -5,7 +5,7 @@
         public Timers Timers { get; set; }
     }
 
-    public class Timers
+    public partial class Timers
     {
         public int DetectTime { get; set; }
         public int DrawTime { get; set; }

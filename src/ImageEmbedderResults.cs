@@ -6,7 +6,7 @@
         public Resolution Resolution { get; set; }
     }
 
-    public class Imageembedderresults
+    public partial class Imageembedderresults
     {
         public Embedding[] Embeddings { get; set; }
         public int TimestampMs { get; set; }

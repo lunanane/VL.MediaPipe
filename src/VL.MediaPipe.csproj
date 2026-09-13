@@ -5,8 +5,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <OutputPath>..\lib</OutputPath>
+    <!-- Build into bin\ and copy to lib\ (below): vvvv loads lib\net8.0\VL.MediaPipe.dll, and a vvvvc export rebuilds
+         this project while holding that file open, which fails when lib\ is the build output. -->
+    <OutputPath>..\bin\$(Configuration)\</OutputPath>
   </PropertyGroup>
+
+  <Target Name="CopyToLib" AfterTargets="Build">
+    <ItemGroup>
+      <_LibFile Include="$(OutDir)$(AssemblyName).dll;$(OutDir)$(AssemblyName).pdb;$(OutDir)$(AssemblyName).xml;$(OutDir)$(AssemblyName).deps.json" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_LibFile)" DestinationFolder="..\lib\$(TargetFramework)\" SkipUnchangedFiles="true" ContinueOnError="WarnAndContinue" Condition="Exists('%(FullPath)')" />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="VL.Core" Version="2024.6.6" />

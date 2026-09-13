@@ -4129,7 +4129,7 @@ let handState = {
 const createHandLandmarker = async (WASM_PATH2, modelAssetPath) => {
   console.log("Starting hand landmark detection");
   console.log(handState);
-  console.log('numHands', parseInt(handState.numHands))
+  console.log("numHands", parseInt(handState.numHands));
   const vision = await Xo.forVisionTasks(WASM_PATH2);
   let handLandmarker = await kc.createFromOptions(vision, {
     baseOptions: {
@@ -4653,9 +4653,45 @@ let outputState = {
   width: 1280,
   height: 720
 };
+let sourceState = {
+  mode: "camera",
+  onChange: void 0
+};
+function setSource(value) {
+  const mode = String(value).trim().toLowerCase();
+  if (mode !== "camera" && mode !== "texture") {
+    console.error(`Invalid Source: ${value} (expected camera or texture)`);
+    return;
+  }
+  if (mode === sourceState.mode) return;
+  console.log("Source: " + mode);
+  sourceState.mode = mode;
+  if (mode === "texture") {
+    stopWebcam();
+  }
+  if (sourceState.onChange) sourceState.onChange(mode);
+  if (mode === "camera" && webcamState.requestedWebcam) {
+    changeWebcam(webcamState.requestedWebcam);
+  }
+}
+function stopWebcam() {
+  if (webcamState.webcamRunning) {
+    webcamState.videoElement.srcObject.getTracks().forEach((track) => {
+      track.stop();
+    });
+    webcamState.webcamRunning = false;
+  }
+  if (webcamState.videoElement) webcamState.videoElement.srcObject = null;
+  if (webcamState.webcamLabel) webcamState.requestedWebcam = webcamState.webcamLabel;
+  webcamState.webcamLabel = "";
+}
 async function changeWebcam(webcam) {
   var _a2;
   console.log("Attempting to change webcam to " + webcam);
+  if (sourceState.mode === "texture") {
+    if (webcam) webcamState.requestedWebcam = webcam;
+    return;
+  }
   var webcamFound = true;
   if (webcam !== webcamState.webcamLabel) {
     webcamFound = false;
@@ -4691,6 +4727,11 @@ async function changeWebcam(webcam) {
   }
 }
 async function startNewWebcam() {
+  if (sourceState.mode === "texture") {
+    webcamState.requestedWebcam = webcamState.webcamLabel;
+    webcamState.webcamLabel = "";
+    return;
+  }
   const constraints = {
     video: {
       deviceId: {
@@ -4717,6 +4758,12 @@ async function startNewWebcam() {
   }
   try {
     let stream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (sourceState.mode === "texture") {
+      stream.getTracks().forEach((track) => track.stop());
+      webcamState.requestedWebcam = webcamState.webcamLabel;
+      webcamState.webcamLabel = "";
+      return;
+    }
     webcamState.videoElement.srcObject = stream;
     stream.getTracks().forEach(function(track) {
       let trackSettings = track.getSettings();
@@ -4746,6 +4793,7 @@ const configMap = {
   },
   "Oheight": (value) => outputState.height = value,
   "Owidth": (value) => outputState.width = value,
+  "Source": (value) => setSource(value),
   "Detectfacelandmarks": (value) => detectSwitch(faceLandmarkState, parseInt(value) === 1),
   "Detectfaces": (value) => detectSwitch(faceDetectorState, parseInt(value) === 1),
   "Detectgestures": (value) => detectSwitch(gestureState, parseInt(value) === 1),
@@ -4865,6 +4913,314 @@ function overlaySwitch(value) {
   video2.style.opacity = 1;
   const canvas = document.getElementById("segmentation");
 }
+const FRAME_MAGIC = "TDPF";
+const FRAME_VERSION = 1;
+const FRAME_HEADER_SIZE = 24;
+const PixelFormat = Object.freeze({ RGBA8: 1, BGRA8: 2 });
+function parseFramePacket(buffer) {
+  if (!(buffer instanceof ArrayBuffer)) {
+    throw new TypeError("frame packet must be an ArrayBuffer");
+  }
+  if (buffer.byteLength < FRAME_HEADER_SIZE) {
+    throw new RangeError(`frame packet has ${buffer.byteLength} bytes, less than the ${FRAME_HEADER_SIZE}-byte header`);
+  }
+  const view = new DataView(buffer);
+  const magic = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3));
+  if (magic !== FRAME_MAGIC) {
+    throw new Error(`frame packet magic is "${magic}", expected "${FRAME_MAGIC}"`);
+  }
+  const version = view.getUint8(4);
+  if (version !== FRAME_VERSION) {
+    throw new Error(`frame packet version ${version} is not supported (expected ${FRAME_VERSION})`);
+  }
+  const format = view.getUint8(5);
+  if (format !== PixelFormat.RGBA8 && format !== PixelFormat.BGRA8) {
+    throw new Error(`frame packet pixel format ${format} is not supported (1 = RGBA8, 2 = BGRA8)`);
+  }
+  const width = view.getUint16(6, true);
+  const height = view.getUint16(8, true);
+  if (width === 0 || height === 0) {
+    throw new RangeError(`frame packet size ${width}x${height} is empty`);
+  }
+  const frameId = view.getUint32(12, true);
+  const timestampMs = view.getFloat64(16, true);
+  const pixelBytes = width * height * 4;
+  if (buffer.byteLength !== FRAME_HEADER_SIZE + pixelBytes) {
+    throw new RangeError(`frame packet has ${buffer.byteLength} bytes, a ${width}x${height} frame needs ${FRAME_HEADER_SIZE + pixelBytes}`);
+  }
+  const pixels = new Uint8ClampedArray(buffer, FRAME_HEADER_SIZE, pixelBytes);
+  if (format === PixelFormat.BGRA8) {
+    swapRedBlue(pixels);
+  }
+  return { frameId, timestampMs, width, height, format, pixels };
+}
+function encodeFramePacket({ frameId, timestampMs, width, height, format = PixelFormat.RGBA8, pixels }) {
+  const pixelBytes = width * height * 4;
+  if (!pixels || pixels.length !== pixelBytes) {
+    throw new RangeError(`pixels must hold ${pixelBytes} bytes for a ${width}x${height} frame`);
+  }
+  const buffer = new ArrayBuffer(FRAME_HEADER_SIZE + pixelBytes);
+  const view = new DataView(buffer);
+  for (let i2 = 0; i2 < 4; i2++) view.setUint8(i2, FRAME_MAGIC.charCodeAt(i2));
+  view.setUint8(4, FRAME_VERSION);
+  view.setUint8(5, format);
+  view.setUint16(6, width, true);
+  view.setUint16(8, height, true);
+  view.setUint16(10, 0, true);
+  view.setUint32(12, frameId >>> 0, true);
+  view.setFloat64(16, timestampMs, true);
+  new Uint8Array(buffer, FRAME_HEADER_SIZE, pixelBytes).set(pixels);
+  return buffer;
+}
+function swapRedBlue(pixels) {
+  for (let i2 = 0; i2 < pixels.length; i2 += 4) {
+    const b2 = pixels[i2];
+    pixels[i2] = pixels[i2 + 2];
+    pixels[i2 + 2] = b2;
+  }
+}
+class LatestFrameSlot {
+  constructor() {
+    this.frame = null;
+    this.received = 0;
+    this.dropped = 0;
+  }
+  put(frame) {
+    if (this.frame !== null) this.dropped++;
+    this.frame = frame;
+    this.received++;
+  }
+  take() {
+    const frame = this.frame;
+    this.frame = null;
+    return frame;
+  }
+  get pending() {
+    return this.frame !== null;
+  }
+}
+function nextTimestamp(lastTimestampMs, nowMs) {
+  return nowMs > lastTimestampMs ? nowMs : lastTimestampMs + 1;
+}
+function yieldToEventLoop() {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      resolve();
+    };
+    channel.port2.postMessage(null);
+  });
+}
+function createFramePump(detect, { isActive = () => true, onError = () => {
+}, yieldFn = yieldToEventLoop } = {}) {
+  const slot = new LatestFrameSlot();
+  const stats = { detected: 0, failed: 0 };
+  let busy = false;
+  let running = Promise.resolve();
+  async function run() {
+    busy = true;
+    try {
+      for (; ; ) {
+        await yieldFn();
+        const frame = slot.take();
+        if (frame === null) break;
+        if (!isActive()) {
+          slot.dropped++;
+          continue;
+        }
+        try {
+          await detect(frame);
+          stats.detected++;
+        } catch (error) {
+          stats.failed++;
+          onError(error, frame);
+        }
+      }
+    } finally {
+      busy = false;
+    }
+  }
+  return {
+    slot,
+    stats,
+    offer(frame) {
+      slot.put(frame);
+      if (!busy) running = run();
+    },
+    get busy() {
+      return busy;
+    },
+    // Settles once the loop has no frame left (for tests and shutdown).
+    get idle() {
+      return running;
+    }
+  };
+}
+class ArrivalRate {
+  constructor(smoothing = 0.1) {
+    this.smoothing = smoothing;
+    this.lastMs = void 0;
+    this.intervalMs = void 0;
+  }
+  tick(nowMs) {
+    if (this.lastMs !== void 0) {
+      const interval = nowMs - this.lastMs;
+      if (interval > 0) {
+        this.intervalMs = this.intervalMs === void 0 ? interval : this.intervalMs + this.smoothing * (interval - this.intervalMs);
+      }
+    }
+    this.lastMs = nowMs;
+  }
+  get fps() {
+    return this.intervalMs ? Math.round(1e3 / this.intervalMs) : 0;
+  }
+}
+let page;
+const texture = {
+  canvas: void 0,
+  // shows the received frame under the overlays
+  context: void 0,
+  width: 0,
+  height: 0,
+  lastTimestamp: -Infinity,
+  rejected: 0,
+  ignored: 0,
+  arrival: new ArrivalRate()
+};
+const pump = createFramePump(detectFrame, {
+  isActive: () => sourceState.mode === "texture",
+  onError: (error, frame) => console.error(`Texture input: detection failed on frame ${frame.frameId}`, error)
+});
+function setupTextureInput(elements) {
+  page = elements;
+  sourceState.onChange = onSourceChange;
+  window.textureInputStats = () => ({
+    source: sourceState.mode,
+    received: pump.slot.received,
+    dropped: pump.slot.dropped,
+    detected: pump.stats.detected,
+    failed: pump.stats.failed,
+    rejected: texture.rejected,
+    ignored: texture.ignored
+  });
+}
+function receiveFramePacket(data) {
+  if (sourceState.mode !== "texture") {
+    texture.ignored++;
+    return;
+  }
+  let frame;
+  try {
+    frame = parseFramePacket(data);
+  } catch (error) {
+    if (texture.rejected++ % 300 === 0) console.error("Texture input: rejected frame packet: " + error.message);
+    return;
+  }
+  frame.ingestTime = performance.now();
+  texture.arrival.tick(frame.ingestTime);
+  pump.offer(frame);
+}
+function onSourceChange(mode) {
+  const textureMode = mode === "texture";
+  page.video.style.display = textureMode ? "none" : "";
+  if (textureMode) {
+    ensureCanvas();
+    texture.canvas.style.display = "";
+    texture.width = 0;
+    texture.height = 0;
+  } else if (texture.canvas) {
+    texture.canvas.style.display = "none";
+  }
+  for (const landmarker of page.allModelState) {
+    landmarker.results = void 0;
+  }
+  clearOverlay();
+}
+function ensureCanvas() {
+  if (texture.canvas) return;
+  texture.canvas = document.createElement("canvas");
+  texture.canvas.id = "texture_input";
+  texture.canvas.style.position = "absolute";
+  texture.canvas.style.left = "0px";
+  texture.canvas.style.top = "0px";
+  page.video.after(texture.canvas);
+  texture.context = texture.canvas.getContext("2d");
+}
+function resize(width, height) {
+  texture.width = width;
+  texture.height = height;
+  for (const element of [texture.canvas, page.canvasElement, page.objectsDiv, page.facesDiv, page.segmentationCanvas]) {
+    element.style.width = width + "px";
+    element.style.height = height + "px";
+    element.width = width;
+    element.height = height;
+  }
+}
+function clearOverlay() {
+  const canvas = page.canvasElement;
+  canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+}
+function send(data) {
+  const ws2 = socketState.ws;
+  if (ws2 && ws2.readyState === ws2.OPEN) {
+    ws2.send(data);
+  }
+}
+async function detectFrame(frame) {
+  const { width, height } = frame;
+  if (width !== texture.width || height !== texture.height) {
+    ensureCanvas();
+    resize(width, height);
+  }
+  const image = new ImageData(frame.pixels, width, height);
+  texture.context.putImageData(image, 0, 0);
+  const meta = { frameId: frame.frameId, sourceTimestamp: frame.timestampMs, ingestTime: frame.ingestTime };
+  const resolution = { width, height };
+  texture.lastTimestamp = nextTimestamp(texture.lastTimestamp, performance.now());
+  const timestamp = texture.lastTimestamp;
+  let timeToDetect = 0;
+  const startDetect = performance.now();
+  for (const landmarker of page.allModelState) {
+    if (landmarker.detect && landmarker.landmarker) {
+      const marker = landmarker.landmarker;
+      if (landmarker.resultsName === "segmenterResults") {
+        await marker.segmentForVideo(image, timestamp, segmenterState.toImageBitmap);
+      } else if (landmarker.resultsName === "gestureResults") {
+        landmarker.results = await marker.recognizeForVideo(image, timestamp);
+      } else if (landmarker.resultsName === "imageResults") {
+        landmarker.results = await marker.classifyForVideo(image, timestamp);
+      } else if (landmarker.resultsName === "imageEmbedderResults") {
+        landmarker.results = await marker.embedForVideo(image, timestamp);
+      } else {
+        landmarker.results = await marker.detectForVideo(image, timestamp);
+      }
+      send(JSON.stringify({
+        [landmarker.resultsName]: { ...landmarker.results, ...meta },
+        "resolution": resolution,
+        ...meta
+      }));
+    }
+    timeToDetect = Math.round(performance.now() - startDetect);
+  }
+  const startDraw = performance.now();
+  clearOverlay();
+  if (overlayState.show) {
+    for (const landmarker of page.landmarkerModelState) {
+      if (landmarker.detect && landmarker.results) {
+        landmarker.draw(landmarker.results, webcamState.drawingUtils);
+      }
+    }
+    if (objectState.detect && objectState.results) {
+      objectState.draw(texture.canvas);
+    }
+    if (faceDetectorState.detect && faceDetectorState.results) {
+      faceDetectorState.draw(texture.canvas);
+    }
+  }
+  const timeToDraw = Math.round(performance.now() - startDraw);
+  send(JSON.stringify({ "timers": { "detectTime": timeToDetect, "drawTime": timeToDraw, "sourceFrameRate": texture.arrival.fps, ...meta } }));
+}
 const WASM_PATH = "./mediapipe/wasm";
 const video$1 = document.getElementById("webcam");
 let flippedVideo = null;
@@ -4875,11 +5231,12 @@ const facesDiv = document.getElementById("faces");
 const segmentationCanvas = document.getElementById("segmentation");
 let allModelState = [faceLandmarkState, faceDetectorState, handState, gestureState, poseState, objectState, imageState, segmenterState, imageEmbedderState];
 let landmarkerModelState = [faceLandmarkState, handState, gestureState, poseState];
+setupTextureInput({ allModelState, landmarkerModelState, video: video$1, canvasElement, objectsDiv, facesDiv, segmentationCanvas });
 (async function setup() {
   handleQueryParams();
   setupWebSocket(socketState.adddress + ":" + socketState.port, socketState);
   webcamState.webcamDevices = await getWebcamDevices();
-  await new Promise(r => setTimeout(r, 1000));
+  await new Promise((r2) => setTimeout(r2, 1e3));
   handState.landmarker = await createHandLandmarker(WASM_PATH);
   gestureState.landmarker = await createGestureLandmarker(WASM_PATH);
   faceLandmarkState.landmarker = await createFaceLandmarker(WASM_PATH);
@@ -4985,6 +5342,7 @@ async function predictWebcam(allModelState2, objectState2, webcamState2, video2)
 }
 function setupWebSocket(socketURL, socketState2) {
   socketState2.ws = new WebSocket(socketURL);
+  socketState2.ws.binaryType = "arraybuffer";
   socketState2.ws.addEventListener("open", () => {
     console.log("WebSocket connection opened");
     socketState2.ws.send("pong");
@@ -4993,6 +5351,10 @@ function setupWebSocket(socketURL, socketState2) {
     });
   });
   socketState2.ws.addEventListener("message", async (event) => {
+    if (typeof event.data !== "string") {
+      receiveFramePacket(event.data);
+      return;
+    }
     if (event.data === "ping" || event.data === "pong") return;
     const data = JSON.parse(event.data);
     for (let [key, value] of Object.entries(data)) {

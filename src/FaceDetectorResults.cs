@@ -9,7 +9,7 @@ namespace MediaPipe.FaceDetectorResults
         public Resolution resolution { get; }
     }
 
-    public class Facedetectorresults
+    public partial class Facedetectorresults
     {
         [JsonPropertyName("detections")]
         public FaceDescription[] Faces { get; init; }

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test-only nodes for test\TextureInputHarness.vl. Not part of the VL.MediaPipe package.
+       Build: dotnet build test\csharp\TextureHarness -c Release  (output test\lib\net8.0\, gitignored) -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>VL.MediaPipe.TextureHarness</AssemblyName>
+    <RootNamespace>VL.MediaPipe.TextureHarness</RootNamespace>
+    <OutputPath>..\..\lib\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The VL.Core vvvv gamma 7.4-0008 ships; installing vvvv put it into the NuGet cache. -->
+    <PackageReference Include="VL.Core" Version="2025.7.4-0008-g793e4b395d" />
+  </ItemGroup>
+
+</Project>

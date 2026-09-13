@@ -1,7 +1,304 @@
-# VL.MediaPipe texture input: M0 groundwork notes
+# VL.MediaPipe texture input
+
+Workstream W6 of `depth-handtracking/plans/vl-tracking-depth-prepass.md`, section B.
+- **Wave 2 (M7), 2026-09-13:** what was built, measurements, deviations and how to run everything. Sections W1–W8.
+- **Wave 1 (M0):** baseline, rebuild proof and change map. Kept unchanged further down, from "Wave 1 record" on; its line references point at the upstream files.
+
+Machine: RENDERPC01, RTX 4090, vvvv gamma 7.4-0008. **Nothing is committed or pushed.** All work is uncommitted in:
+- superproject `D:\claude\VL.MediaPipe`, branch `feature/texture-input` (at `bd17c52`)
+- submodule `mediapipe-touchdesigner`, local branch `texture-input` (at `d8a0c21`)
+
+## W1. What was built
+
+### Page (submodule `mediapipe-touchdesigner/src`, rebuilt into `web/`)
+
+**Rebuild gate first.** Before any feature code, the two hand edits of the shipped bundle were re-applied to the source:
+- `console.log('numHands', …)` in `handDetection.js`
+- the 1 s startup delay in `main.js`
+
+The rebuild is **AST-equivalent to shipped `8ca59f3`**:
+- 484 = 484 top-level statements
+- `Literal.raw` (quote style, `1000` vs `1e3`) ignored
+- one statement differs only by esbuild's consistent rename of the arrow parameter `r` → `r2`
+
+Evidence is in `D:\claude\_tools\mp-rebuild\evidence\w6\`: `rebuild_gate_ast_equiv.txt` and the gate bundle, sha256 `7C3F5EC7…2107`. The comparer is `D:\claude\_tools\mp-rebuild\npm\ast_equiv_w6.mjs`. The byte-level diff to shipped is only those 2 lines; comparing against the CRLF working-tree copy also shows CRLF inside one template literal, which is a checkout artifact.
+
+**Then texture mode.** Diff: 5 source files plus 1 test file.
+
+| File | Change |
+|---|---|
+| `src/textureSource.js` (new, no DOM) | TDPF parser (validates magic, version, format, exact size; BGRA8 → RGBA in place; pixels are a view, not a copy), `encodeFramePacket`, `LatestFrameSlot`, `nextTimestamp`, `createFramePump`, `ArrivalRate` |
+| `src/textureInput.js` (new) | `receiveFramePacket`: parse → slot → pump. `detectFrame` mirrors `predictWebcam`'s detection on `new ImageData(pixels, w, h)`. Draws the frame into a `#texture_input` canvas under the overlays; sizes the overlays to the frame. `window.textureInputStats()` |
+| `src/state.js` | `sourceState`, `setSource`, `stopWebcam`; camera guards in `changeWebcam` and `startNewWebcam` |
+| `src/modelParams.js` | config key `'Source': value => setSource(value)` |
+| `src/main.js` | import; `setupTextureInput(...)`; `ws.binaryType = 'arraybuffer'`; binary messages go to `receiveFramePacket` before the ping check |
+| `test/textureSource.test.mjs` (new) | 13 Node tests |
+
+**Behaviour.**
+- `Source` = `camera` (default) or `texture`, case-insensitive. It comes from a WebSocket config message or the URL query.
+- **Texture mode**:
+  - releases the webcam, and `changeWebcam` keeps it closed
+  - hides `#webcam`
+  - runs detection only when a frame arrives
+- **The detect loop never overlaps.** Before taking a frame, the pump yields to the event loop (a MessageChannel task, which is not throttled like `setTimeout`). Frames that arrived meanwhile collapse to the newest, and drops are counted.
+- **Detection timestamps** are `performance.now()`, forced strictly increasing (W6.4).
+- **Texture mode only**, as the plan's Wave 1 findings require:
+  - Every results object gets `frameId`, `sourceTimestamp` (the header timestamp echoed back) and `ingestTime` (page clock), both inside the results object and at the message root.
+  - The results key stays first, because VL routes messages by their first 8 bytes.
+  - `timers` carries the same three fields, and `sourceFrameRate` is the measured arrival rate as an integer.
+- **Camera mode** runs exactly the upstream code path; the new branches are never taken (W2).
+
+**Rebuilt `web/`.** `web/assets/index-CRyYWvPh.js` (244 216 B) replaces `index-DS3gr1CQ.js`, and `web/index.html` references it. Every other file is unchanged; LF-vs-CRLF-only differences after `robocopy` were restored with `git checkout`.
+
+### C# (`src/`)
+
+**`src/FramePacket.cs` (new)** holds the `InputSource { Camera, Texture }` enum and the static class `FramePacket` (see W6.1 for why it is static):
+- `HeaderSize = 24` and the format constants
+- `NowMs`: a Stopwatch clock
+- `Write(IImage, frameId, timestampMs, byte[]? reuse)` builds the 24-byte header plus top-down pixels:
+  - R8G8B8A8 → format 1, B8G8R8A8 → format 2
+  - the X variants are sent with alpha 255
+  - `ScanSize` row padding is honoured
+  - any other format throws `NotSupportedException`
+- `Pack(owner, image, apply, client, sendQueueLength, ackTimeout, out packet, out frameId, out droppedFrames)`:
+  - builds at most one packet per frame
+  - only while a client is connected and the socket send queue is empty
+  - **only after the page has acknowledged the previous packet**, or after `ackTimeout` ms (W6.2)
+  - frame ids come from one static counter, so they are unique across all senders and an echoed id names exactly one packet
+  - per-owner state (a pool of 3 exact-size `byte[]`, the in-flight id, drop counts) lives in a `ConditionalWeakTable`
+- `Acknowledge(frameId)` (internal): a lock-protected ring of the last 64 echoed frame ids, filled by `Timers.FrameId`
+- helpers `ReadbackSize(Int2, maxInputSize)`, `IsTextureInput(source, texture)` and `PageSource(source)`
+
+**Other C# changes.**
+- `src/FrameMetadata.cs` (new): partial classes add `long? FrameId`, `double? SourceTimestamp` and `double? IngestTime` to the 9 inner result classes and `Timers`.
+  - `Timers.FrameId`'s setter also calls `FramePacket.Acknowledge`: the page sends timers after it has handled a frame, and VL.MediaPipe.vl deserializes every timers message, so this is the acknowledgement `Pack` waits for.
+  - `Timers.ReceivedTime` is `FramePacket.NowMs` at deserialization.
+  - `Timers.GetFrameInfo(out int frameId, out float frameLatency)` returns `-1`/`-1` for camera input.
+- The one-word `partial` edit in 9 files: `HandResults`, `GestureResults`, `PoseResults`, `FaceLandmarkResults`, `FaceDetectorResults`, `ObjectResults`, `ImageResults`, `ImageEmbedderResults`, `TimerResult`.
+- `src/VL.MediaPipe.csproj` builds into `bin\$(Configuration)\` and copies to `lib\net8.0\` with a warning-only copy (W6.8).
+
+### VL documents
+
+**`VL.MediaPipe.vl`** is generated by `scripts/vl/patch_mediapipe_vl.py`:
+- It starts from `git show HEAD:VL.MediaPipe.vl`, inserts snippets at anchors that must each match exactly once, and writes CRLF.
+- Ids are sha256-derived 22-character base62, so the output is reproducible (`--check`).
+- The result is 200 inserted lines, 113 new Ids and 2 region `Bounds` widened.
+
+What it adds:
+- **`MediaPipe` pins** (after `Image Size`):
+  - `Source` (`InputSource`, default Camera)
+  - `Input Texture` (Stride `Texture`)
+  - `Max Input Size` (Integer32, default 0)
+- **Source to the page**: `PageSource` → `StringSender` named `Source`. It re-sends on change and to every new client, like the other senders.
+- **Texture path**, inside an `If` region with condition `IsTextureInput(Source, Input Texture)`, so camera mode runs none of it:
+  - `Info.View Size` → `ReadbackSize(…, Max Input Size)` → `TextureToImage.Size`
+  - `TextureToImage` with New Format `R8G8B8A8_UNorm`
+  - → `Pack`, with Owner = WebSocketServer, Client = `FirstOrDefault(Connected Clients)`, Send Queue Length, Ack Timeout 1000 (no timers link; see W6.15)
+  - → `WebSocketServer.SendData`, fed Data = Packet and Apply = Result (W6.3)
+- **`Timings`** gains `Frame Id` (Integer32) and `Frame Latency (ms)` (Float32), wired like its three existing outputs: `GetFrameInfo` inside the Try region, then the Try border, then the If border with a feedback link.
+- **New dependency**: `VL.Stride` (Version 2025.7.1, like the help patches).
+
+**Help and harness.**
+- `help/HowTo Track hands on a texture.vl` and `test/TextureInputHarness.vl` are generated by `scripts/vl/gen_docs.py` from `scripts/vl/templates/*.tmpl`.
+- `help/hand_rgb_sample.jpg` is a byte-identical copy of the fixture (sha256 `396B6C28…8309`); see W7 Q4.
+- The help patch runs FileTexture (Is sRGB False) → MediaPipe (Source Texture, Detect hands) → HandDetector Landmarks and Timings (Detection Time, Source Frame Rate, Frame Id, Frame Latency (ms)). A preview goes through `ToStrideRenderer` → `RenderWindow` (needs VL.CEF.Stride 0.8.2).
+- `test/csharp/TextureHarness/` builds `test/lib/net8.0/VL.MediaPipe.TextureHarness.dll` (ImportAsIs, test-only). Its `TextureInputProbe` process node writes the sentinels under the log category `[VL.MediaPipe]`:
+  - `START`, `CAMERA ENUM watched`, `DEVICE LIST received`
+  - `FIRST FRAME ID`, `FIRST HAND landmarks=… frameId=… wrist=… indexTip=…`, `PROGRESS`
+  - `FRAME IDS`, `LATENCY`, `DETECT`, `DEVICE LIST final`, `DONE`
+
+## W2. Camera mode is unchanged
+
+- **Messages.** The page sends none of the new fields in camera mode. `binaryType = 'arraybuffer'` only changes how binary messages arrive, and upstream VL never sends any.
+- **Smoke run.** Wave 1's `smoke_page.mjs` was re-run on shipped `web/` and on the feature build, in camera mode, no camera. Both gave:
+  - 31 files served, 0 missing
+  - WS `open` → `pong` → `{"type":"webcamDevices","devices":[{"label":""}]}`
+  - all 9 "Starting …" logs, reaching `changeWebcam`
+  - 0 exceptions, 0 console errors, ANGLE D3D11 RTX 4090
+  - 4.9 s and 5.1 s (both now include the 1 s delay)
+
+  Evidence: `D:\claude\_tools\mp-rebuild\evidence\w6\smoke-camera-{shipped,feature}.json`.
+- **C# binding.** Camera-mode timers JSON binds exactly as before (`FrameId` null, `GetFrameInfo` → -1/-1); this is checked in `FramePacketCheck`.
+- **VL.** The whole texture path sits inside an `If` that is false in camera mode. The only new thing running in camera mode is the `Source` StringSender (`{"Source": "camera" }`), and the page ignores an unchanged Source.
+
+## W3. Tests and checks
+
+| Check | Command | Result |
+|---|---|---|
+| Page unit tests | `node --test "test/**/*.test.mjs"` (portable Node 24.21.0, in the submodule) | **13 / 13 pass**: header offsets and endianness, row order, BGRA swap, round trip, size, magic, version and format rejection, latest-frame slot, timestamp monotonicity, pump non-overlap and collapse, error recovery, inactive-source drop, pump + timestamps, arrival rate |
+| C# FramePacket and POCO checks | `test/csharp/FramePacketCheck` | **33 / 33 pass** (counted from the executable's `ok` lines after the acknowledgement change). Covers header bytes, buffer reuse, R8 rejection, and Pack gating: frame id -1 before the first packet, no packet while unacknowledged, camera timers and echoes of other ids do not acknowledge, the echoed id releases the next packet, queue, no client, no Apply, timeout, pool of 3, ids unique across owners. Also ReadbackSize, IsTextureInput, PageSource, camera and texture timers JSON, `GetFrameInfo` latency and handResults inner frameId |
+| Cross-language wire format | `test/framepacket/check_packets.mjs` parses C#-written packets with the page's parser | **4 / 4 packets byte-equal**: RGBA8 3×2, BGRA8 259×2 (frame id 0xDEADBEEF), RGBX8 2×2, RGBA8 4×3 with padded rows |
+| `dotnet build src\VL.MediaPipe.csproj -c Release` | | **0 errors**, 376 warnings: 349 are upstream's (CS8618 etc.), the rest CS1591 for the new members |
+| Harness DLL build | `dotnet build test\csharp\TextureHarness -c Release` | 0 errors, 0 warnings |
+
+All of these run with one command: `scripts\test-texture-input.ps1` (see W8).
+
+## W4. Browser-level texture mode (headless Edge, no vvvv)
+
+`scripts/page-smoke.mjs` serves `web/`, plays the vvvv side of the WebSocket and drives headless Edge over CDP:
+- **Config on connect:** `Source texture` plus the 9 `Detect*` flags, as VL sends them. Only hands are on.
+- **Frames:** TDPF packets of the hand fixture (decoded once with Pillow).
+- **Gating:** like `Pack`, a new frame goes out only when the socket has drained and, with `--ack 1`, the page has echoed the previous frame id.
+- **Latency:** receive time of the timers minus the echoed `sourceTimestamp`, on Node's clock.
+
+| Run (all detections 21 landmarks; frame ids equal inside/outside results; timers ids strictly increasing; 0 exceptions) | Frames sent | Latency median / p90 / max (ms) | detectTime median / p90 (ms) | Page drops |
+|---|---|---|---|---|
+| 350×345, 60 fps, **no ack**; page defaults (7 detectors on, VL's Detect flags not yet sent by that script version) | 205 | **265.7 / 1322.3 / 2841.7** | 61 / 63 | 0 |
+| 350×345, 60 fps, ack, hands only | 346 | **10.2 / 14.1** / 2861.8 (start-up) | 9 / 11 | 0 |
+| 350×345, as fast as acked, hands only | 572 | **9.0 / 14.7** / 3102.3 (start-up) | 8 / 11 | 0 |
+| 640×576, as fast as acked, hands only | 688 | **11.7 / 15.1** / 3041.5 (start-up) | 9 / 10 | 0 |
+
+**Why the acknowledgement exists (first row).** Without it:
+- latency grew to seconds while the page reported 0 drops
+- the frames were not queued in the page; they sat in socket and browser buffers
+- a completed socket send (Watson's task, hence `Send Queue Length`) only means the bytes reached the OS
+
+So frames are gated on the echoed frame id.
+
+**Other observations.**
+- The maxima in the ack rows are start-up: frames sent before the landmarker had loaded (2–3 ack timeouts).
+- First detection in Edge: wrist (0.7272, 0.1840), index tip (0.1264, 0.3772), handedness Left 0.92. This is the orientation reference for the vvvv run (W5).
+- Evidence: `results\page-smoke\texture-*.json` (gitignored).
+
+## W5. vvvv results: headless harness and compile gate
+
+### Headless harness: PASS
+
+**Run.** `scripts\run-texture-harness.ps1`, 2026-09-13 20:44.
+- vvvv 7.4 ran `-o D:\claude\_vl-dev\VL.MediaPipe\test\TextureInputHarness.vl -m --log --package-repositories D:\claude\_vl-dev --nuget-path D:\claude\_vl-dev\nugets`.
+- Log: `Documents\vvvv\gamma-preview\vvvv_2026-09-13_20-44-00_423155.log`. The script keeps a copy and `summary-20260913-204420.json` in `results\texture-harness\`.
+- Input: `tools\hand-tracking\fixtures\hand_rgb_sample.jpg`, copied byte-identical (sha256 `396B6C28…8309`), loaded with FileTexture (Is sRGB False). Source Texture, Detect hands, Max Input Size 0.
+- The script waited 19 s after getting the lock. The log has **0 FAIL and 0 CRIT lines**. The vvvv process tree was killed and waited for before the lock was released.
+
+| Sentinel (`[VL.MediaPipe]`) | Value |
+|---|---|
+| `FIRST FRAME ID` | 0, at 0.7 s |
+| `DEVICE LIST received` | entries = 1 (`OBS Virtual Camera`), 2 enum events, at 2.1 s. The camera-mode `webcamDevices` message still arrives and fills the `Camera` enum. This PC has a virtual camera, so the list is not empty |
+| `FIRST HAND` | **landmarks = 21**, frameId 39, wrist (0.7272, 0.1840, -0.0000), index tip (0.1264, 0.3772, -0.0681), at 6.1 s |
+| `FRAME IDS` | first 0, last 190, 190 unique, 1 gap, **0 non-increasing**, 151 frames with a hand, last landmark count 21 |
+| `LATENCY` | n = 150 (frames after the first hand): **median 7.11, p90 11.52**, min 5.58, max 382.71, mean 11.08 ms |
+| `DETECT` | detectTime median 6.0, p90 7.0 ms. Latency minus detectTime: **median 0.90, p90 4.48 ms** |
+
+**Reading these numbers.**
+- **Orientation is verified.** The landmarks equal the headless Edge reference in W4 to 4 decimals, so the readback sends rows top-down and unmirrored.
+- **What latency covers.** It runs from `Pack` building the packet to VL deserializing that frame's timers, both on vvvv's Stopwatch clock. It excludes the `TextureToImage` readback before `Pack` (Q5).
+- **The maximum** falls just after the hand was first detected: the PROGRESS line at 60 frames showed 18.3 ms; later ones 6.1–6.7 ms.
+- **The single id gap** is two timers messages arriving within one vvvv frame. The probe samples once per frame.
+- **Plan goal 4** (added latency ≤ 1 frame + 10 ms): packet → result adds median 0.9 ms and p90 4.5 ms over MediaPipe's own detectTime. The readback delay is not part of that figure.
+
+### Compile gate (run 6, 20:45) and what "exit 0 for VL.MediaPipe.vl" runs into
+
+| Document | Result |
+|---|---|
+| `test\TextureInputHarness.vl` | **exit 0** (26 s), no dependency-error line |
+| `help\HowTo Track hands on a texture.vl` | **exit 0** (27 s), no dependency-error line |
+| `VL.MediaPipe.vl` | VL compile and 1465 asset build steps succeed. The **export's publish fails**: NETSDK1152, duplicate output `obj\Release\VL.MediaPipe.dll` vs `D:\claude\VL.MediaPipe\bin\Release\net8.0\VL.MediaPipe.dll`, exit -532462766 |
+
+**Why the package document fails to export.** The failure is a name clash, not a compile error:
+- vvvvc exports an application named after the document. `results\vvvvc\VL.MediaPipe\src\VL.MediaPipe\VL.MediaPipe.csproj` builds an app assembly `VL.MediaPipe`.
+- The same project references the package's own C# assembly: `<Reference Include="VL.MediaPipe" HintPath="D:\claude\VL.MediaPipe\bin\Release\net8.0\VL.MediaPipe.dll" />`.
+- A publish cannot hold two `VL.MediaPipe.dll`. That follows from upstream naming both the document and the assembly `VL.MediaPipe`; removing stray copies only changes which copy collides (run 5 hit `results\framepacket-check\bin`, run 6 `bin\Release`).
+- The package document does compile as a dependency: the help and harness runs above show no "VL.MediaPipe.vl has errors" line, and the harness ran it in vvvv.
+
+**Attempted workaround (inconclusive).** A byte-identical copy, `VL.MediaPipe.GateCopy.vl` at the repo root, was compiled under the lock at 20:48 and then deleted together with its export.
+- It failed for a different reason: "There are build errors", with "Not found: FaceDescription / Keypoint / Category / Facelandmark / Landmark / Worldlandmark".
+- Outside the package context, the document's bare-name `PlatformDependency Location="VL.MediaPipe.dll"` does not resolve.
+- So it neither confirms nor rules out that the package document would export under another name.
+
+**Status: the acceptance item "vvvvc gate exit 0 for VL.MediaPipe.vl" is not met** (Q8). What is established:
+- In run 6 the package document got past VL compilation (no "There are build errors"), generated code and built 1465 assets before the publish clash.
+- It compiles cleanly as a dependency of the help patch and the harness.
+- The harness ran it successfully in vvvv.
+
+## W6. Deviations from the plan and the wave 1 change list
+
+1. **No `[ProcessNode]` in VL.MediaPipe.dll.**
+   - Without `[assembly: ImportAsIs]` vvvv imports the assembly the legacy way and ignores the attribute. The probe document failed with "Not found: FramePacket … dependency: VL.MediaPipe.dll".
+   - Adding ImportAsIs would change how every upstream type imports, so FramePacket is a static class. Its state is keyed by the owning WebSocketServer.
+   - A probe then confirmed that `Pack`, `PageSource`, `GetFrameInfo`, `ReadbackSize`, the `InputSource` pad and the ImportAsIs test DLL's process node all compile.
+2. **Flow control by acknowledgement.** The plan did not have this; the W4 measurement made it necessary. `Pack` builds a new packet only after the page echoes the previous frame id, or after `Ack Timeout` (1000 ms). Frames in between are dropped on the VL side, which is the latest-frame rule applied before the socket.
+3. **`SendData` rather than a bare `SendAsync (Advanced)`.** `SendData` is VL.IO.WebSocket's own wrapper of `SendAsync (Advanced)`: Message Type Binary, an `Apply` gate, and the `TaskHandler`/`Counter` behind `Send Queue Length`. It needs no hand-built If region and keeps the queue count correct.
+   - `SendAsync (Advanced)` sends a `byte[]` without copying but copies any other `IReadOnlyList<byte>` element by element in VL.
+   - So packets are exact-size arrays.
+4. **Detection timestamps use the page clock.** `performance.now()` is forced strictly increasing, and is not the header timestamp:
+   - Camera and texture mode feed the same task graphs.
+   - A clock jump between vvvv's Stopwatch and the page clock would throw "timestamp must be monotonically increasing" and stop the camera loop.
+   - The header timestamp is still echoed as `sourceTimestamp`.
+5. **What `Frame Latency (ms)` measures.** From `Pack` building the packet to VL deserializing the matching `timers` message (`Timers.ReceivedTime`), both on `FramePacket.NowMs`.
+   - It includes transfer, the page's detection and drawing.
+   - It excludes the `TextureToImage` readback before `Pack`, whose frame delay is not measured separately yet (W7 Q5).
+6. **`Source` travels as a config message** (a StringSender), not in the startup URL. It can be switched at runtime without a reload. The page closes and keeps closed the camera in texture mode, including while a camera start is already in progress.
+7. **VL.MediaPipe.vl gains a `VL.Stride` dependency.** The `Input Texture` type and `TextureToImage` need it.
+8. **`VL.MediaPipe.csproj` output path.** vvvvc exports rebuild the package's `src\VL.MediaPipe.csproj` while vvvvc itself holds `lib\net8.0\VL.MediaPipe.dll` open; the copy into `lib` failed with MSB3027. So the project builds into `bin\` and copies to `lib\` with `ContinueOnError`, the arrangement VL.TrackingDepthPrepass uses. Packaging (`lib\**`) is unchanged.
+9. **The vvvvc gate opens `VL.MediaPipe.vl` by its real path.** Through the `_vl-dev` junction it reports "Entry point for document VL.MediaPipe.vl not found". Help and harness open through the junction, so the DLL has a single load path.
+10. **Fixture path.** The image is at `tools\hand-tracking\fixtures\hand_rgb_sample.jpg`, not `tests\fixtures\`.
+11. **`HandDetector` has no `Frame Id` pin yet.** `Timings` has one, and `Handresults.FrameId` exists in C#.
+12. **Readback format is always `R8G8B8A8_UNorm`.** An sRGB texture would be sent as linear values. The help and the harness load the image with FileTexture `Is sRGB = False`; the prepass output is UNORM anyway.
+13. **Dev nuget folder layout.**
+    - `dotnet restore --packages` lays packages out as `id\version`. vvvvc 7.4 did not see them there: `Missing package: VL.CEF` for VL.MediaPipe.vl and `Missing package: VL.CEF.Stride` for the help patch. Its Debug log shows no lookup of either package.
+    - After `scripts\seed-dev-nugets.ps1` added `<Id>.<Version>` junctions (`VL.CEF.0.8.2` → `vl.cef\0.8.2`, and so on: the layout `nuget install` produces), both errors were gone on the next gate run. The first real compile error then appeared (item 14).
+    - So `--nuget-path` wants the `<Id>.<Version>` layout.
+14. **`ReadbackSize` is `void ReadbackSize(int maxInputSize, Int2 textureSize, out Int2 size)`.** With the signature `Int2 ReadbackSize(Int2, int)`, vvvvc failed with `ReadbackSize doesn't have a pin called "Result"`, while `PageSource` and `Pack` do have `Result`. The legacy import names the output of that Int2-in/Int2-out method differently. An out parameter gets its own name (`Size`) and avoids the question.
+15. **The acknowledgement does not come through a VL link.** The first version linked the MediaPipe definition's timers channel (`Channel.Value`, id `BUCnZUXlFjwN75B0txa6tQ`) into `Pack` inside the Update operation. vvvvc rejected it: "This link is between two elements that are executed on different operations!", because upstream reads that channel only in the internal `GetTimers` operation. Instead:
+    - `Timers.FrameId`'s setter records every echoed id (`FramePacket.Acknowledge`), since each timers message is deserialized by the patch anyway.
+    - Frame ids are unique across all senders, so an echo can never release another MediaPipe node's packet.
+    - Checked afterwards: the working-tree document has the same 2 references to that channel pin as HEAD (its declaration and upstream's link), and `Pack` has no Timers pin.
+16. **vvvvc exit codes of dependent documents need a second look.** When the package document fails to compile, vvvvc still exports documents that use it and exits 0, logging only "The project … VL.MediaPipe.vl has errors. Package compilation will continue assuming the error is non-critical". Earlier gate runs where the help patch or harness "passed" while VL.MediaPipe.vl failed therefore verified nothing about them. `scripts\vvvvc-gate.ps1` now counts that line as a failure.
+17. **No `VL.MediaPipe.dll` copies inside the package folder besides the build outputs.** With the package document compiling, its export failed at publish with NETSDK1152, "multiple publish output files with the same relative path": the exported app's own `VL.MediaPipe.dll` and `results\framepacket-check\bin\VL.MediaPipe.dll`, the copy the C# check program made. `test\csharp\FramePacketCheck` now builds into `%TEMP%\VL.MediaPipe.FramePacketCheck\bin\`. Removing it did not fix the export: the next run collided with `bin\Release\net8.0\VL.MediaPipe.dll` instead, because the real cause is the document/assembly name clash described in W5.
+
+## W7. Open questions
+
+- **Q1 (wave 1, still open).** Where do page commits live? Everything is still an uncommitted local submodule branch.
+- **Q2 (wave 1, still open).** Pin the toolchain? The recipe is still `npm install --no-package-lock`; it resolved vite 6.4.3 again.
+- **Q3 (wave 1, answered).** The frame fields exist in texture mode only.
+- **Q4 (new).** `help/hand_rgb_sample.jpg` copies a depth-handtracking fixture of unknown provenance (added in `4e84e0f`). Replace it or clear it before any publishing.
+- **Q5 (new).** Should the readback delay (`TextureToImage` → `ReadBackTexture` frame delay) be measured and reported, or lowered, to get closer to the plan's "≤ 1 frame + 10 ms"?
+- **Q6 (new).** Add `Frame Id` to `HandDetector` and the other detectors?
+- **Q7 (new).** Pick `R8G8B8A8_UNorm_SRgb` automatically for sRGB inputs?
+- **Q8 (new).** `vvvvc VL.MediaPipe.vl` cannot export while the document and the C# assembly are both named `VL.MediaPipe` (W5). Accept the gate for the package document as: VL compile succeeds and help/harness compile it cleanly? Or rename one of the two, which breaks upstream compatibility?
+
+## W8. How to run
+
+Portable Node is `D:\claude\_tools\node\node.exe`. The reference Python is `D:\claude\_tools\refvenv-cuda\Scripts\python.exe`.
+
+```
+# page: build and tests (in the submodule; npm cache D:\claude\_tools\npm-cache)
+cd mediapipe-touchdesigner
+npm install --no-package-lock && npm run build
+node --test "test/**/*.test.mjs"
+robocopy _mpdist ..\web /MIR     then  git checkout -- <files whose diff is EOL-only>
+
+# C#
+dotnet build src\VL.MediaPipe.csproj -c Release                    (bin\Release\net8.0 -> lib\net8.0)
+dotnet build test\csharp\TextureHarness -c Release                 (test\lib\net8.0, harness only)
+
+# everything without vvvv (node tests, C# checks, cross-language packets; -PageSmoke adds headless Edge)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test-texture-input.ps1 [-PageSmoke]
+
+# regenerate the VL documents (then --check must say "up to date")
+python scripts\vl\patch_mediapipe_vl.py          python scripts\vl\gen_docs.py
+
+# dev nugets (once): VL.CEF 0.8.2, VL.CEF.Stride 0.8.2, VL.IO.WebServer 1.0.1 -> D:\claude\_vl-dev\nugets
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\seed-dev-nugets.ps1
+
+# compile gate (team lock, junction D:\claude\_vl-dev\VL.MediaPipe, --nuget-path D:\claude\_vl-dev\nugets)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\vvvvc-gate.ps1 [-Documents a.vl,b.vl] [-Verbosity Debug]
+
+# headless harness (team lock; copies the fixture to results\texture-harness\)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-texture-harness.ps1
+```
+
+Both vvvv scripts share `scripts\lib\MpCommon.ps1`:
+- They take `D:\claude\_vl-dev\vvvv.lock` with CreateNew, polled every 10 s for up to 45 min.
+- They kill only the process tree they started, by PID.
+- They wait until every process of that tree has exited (CEF helpers included) before deleting the lock.
+
+---
+
+# Wave 1 record: M0 groundwork notes (2026-09-13)
 
 Workstream W6 (plan `depth-handtracking/plans/vl-tracking-depth-prepass.md`, section B, milestone M0).
-Written 2026-09-13 on RENDERPC01. **Nothing here is implemented yet**: this file records the baseline,
+Written 2026-09-13 on RENDERPC01. **At the time nothing was implemented**: this record keeps the baseline,
 proves the page rebuild, maps every change site for M7, and gives an ordered change list.
 
 Line references are `file:line`. They point to:

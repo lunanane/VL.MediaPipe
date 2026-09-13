@@ -6,7 +6,7 @@
         public Resolution Resolution { get; set; }
     }
 
-    public class Gestureresults
+    public partial class Gestureresults
     {
         public Gesture[][] Gestures { get; set; }
         public Landmark[][] Landmarks { get; set; }

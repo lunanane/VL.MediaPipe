@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document xmlns:p="property" xmlns:r="reflection" Id="@ID(doc)" LanguageVersion="2025.7.4-0008-g793e4b395d" Version="0.128">
+  <NugetDependency Id="@ID(dep-corelib)" Location="VL.CoreLib" />
+  <NugetDependency Id="@ID(dep-stride)" Location="VL.Stride" />
+  <NugetDependency Id="@ID(dep-mediapipe)" Location="VL.MediaPipe" />
+  <PlatformDependency Id="@ID(dep-mediapipe-dll)" Location="../lib/net8.0/VL.MediaPipe.dll" />
+  <PlatformDependency Id="@ID(dep-harness-dll)" Location="lib/net8.0/VL.MediaPipe.TextureHarness.dll" />
+  <Patch Id="@ID(root-patch)">
+    <Canvas Id="@ID(root-canvas)" DefaultCategory="Main" CanvasType="FullCategory" />
+    <Node Name="Application" Bounds="100,100" Id="@ID(app)">
+      <p:NodeReference>
+        <Choice Kind="ContainerDefinition" Name="Process" />
+        <FullNameCategoryReference ID="Primitive" />
+      </p:NodeReference>
+      <Patch Id="@ID(app-patch)">
+        <Canvas Id="@ID(app-canvas)" CanvasType="Group">
+          <Pad Id="@ID(pad-title)" Bounds="60,20,520,40" ShowValueBox="true" isIOBox="true" Value="Texture input harness: tracks hands on a still image fed as a texture. scripts\run-texture-harness.ps1 copies the fixture next to it and greps the TEXTURE HARNESS lines in vvvv's log.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Node Bounds="60,100,125,19" Id="@ID(n-filetexture)">
+            <p:NodeReference LastCategoryFullName="Stride.Assets" LastDependency="VL.Stride.Assets.Windows.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="FileTexture" />
+            </p:NodeReference>
+            <Pin Id="@ID(ft-path)" Name="Path" Kind="InputPin" DefaultValue="..\results\texture-harness\hand_rgb_sample.jpg">
+              <p:TypeAnnotation LastCategoryFullName="IO" LastDependency="VL.CoreLib.vl">
+                <Choice Kind="TypeFlag" Name="Path" />
+              </p:TypeAnnotation>
+            </Pin>
+            <Pin Id="@ID(ft-mips)" Name="Generate Mipmaps" Kind="InputPin" DefaultValue="False" />
+            <Pin Id="@ID(ft-srgb)" Name="Is sRGB" Kind="InputPin" DefaultValue="False" />
+            <Pin Id="@ID(ft-texture)" Name="Texture" Kind="OutputPin" />
+          </Node>
+          <Pad Id="@ID(pad-source)" Comment="Source" Bounds="240,130,70,15" ShowValueBox="true" isIOBox="true" Value="Texture">
+            <p:TypeAnnotation LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.dll">
+              <Choice Kind="TypeFlag" Name="InputSource" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Node Bounds="60,180,305,19" Id="@ID(n-mediapipe)">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="MediaPipe" />
+            </p:NodeReference>
+            <Pin Id="@ID(mp-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="@ID(mp-hands)" Name="Detect hands" Kind="InputPin" DefaultValue="True" />
+            <Pin Id="@ID(mp-overlays)" Name="Show overlays" Kind="InputPin" DefaultValue="True" />
+            <Pin Id="@ID(mp-source)" Name="Source" Kind="InputPin" />
+            <Pin Id="@ID(mp-texture)" Name="Input Texture" Kind="InputPin" />
+            <Pin Id="@ID(mp-stateout)" Name="State Output" Kind="OutputPin" />
+            <Pin Id="@ID(mp-output)" Name="Output" Kind="OutputPin" />
+            <Pin Id="@ID(mp-enabled)" Name="Enabled" Kind="InputPin" DefaultValue="True" />
+          </Node>
+          <Node Bounds="60,260,85,19" Id="@ID(n-hands)">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="HandDetector" />
+            </p:NodeReference>
+            <Pin Id="@ID(hd-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="@ID(hd-input)" Name="Input" Kind="InputPin" />
+            <Pin Id="@ID(hd-max)" Name="Max Number of Hands" Kind="InputPin" DefaultValue="1" />
+            <Pin Id="@ID(hd-landmarks)" Name="Landmarks" Kind="OutputPin" />
+          </Node>
+          <Node Bounds="260,260,125,19" Id="@ID(n-timings)">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="Timings" />
+            </p:NodeReference>
+            <Pin Id="@ID(tm-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="@ID(tm-input)" Name="Input" Kind="InputPin" />
+            <Pin Id="@ID(tm-detect)" Name="Detection Time" Kind="OutputPin" />
+            <Pin Id="@ID(tm-frameid)" Name="Frame Id" Kind="OutputPin" />
+            <Pin Id="@ID(tm-latency)" Name="Frame Latency (ms)" Kind="OutputPin" />
+          </Node>
+          <Pad Id="@ID(pad-camera)" Comment="Camera" Bounds="460,300,120,15" ShowValueBox="true" isIOBox="true">
+            <p:TypeAnnotation LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.dll">
+              <Choice Kind="TypeFlag" Name="CamerasEnum" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Node Bounds="60,360,405,19" Id="@ID(n-probe)">
+            <p:NodeReference LastCategoryFullName="MediaPipe.Test" LastDependency="VL.MediaPipe.TextureHarness.dll">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="TextureInputProbe" />
+            </p:NodeReference>
+            <Pin Id="@ID(pr-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="@ID(pr-landmarks)" Name="Landmarks" Kind="InputPin" />
+            <Pin Id="@ID(pr-frameid)" Name="Frame Id" Kind="InputPin" />
+            <Pin Id="@ID(pr-latency)" Name="Frame Latency" Kind="InputPin" />
+            <Pin Id="@ID(pr-detect)" Name="Detection Time" Kind="InputPin" />
+            <Pin Id="@ID(pr-camera)" Name="Camera" Kind="InputPin" />
+            <Pin Id="@ID(pr-target)" Name="Target Frames" Kind="InputPin" DefaultValue="150" />
+            <Pin Id="@ID(pr-done)" Name="Done" Kind="OutputPin" />
+          </Node>
+          <Pad Id="@ID(pad-frameid)" Comment="Frame Id" Bounds="300,320,50,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="@ID(pad-latency)" Comment="Frame Latency (ms)" Bounds="370,320,60,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="@ID(pad-done)" Comment="Done" Bounds="60,420,35,35" ShowValueBox="true" isIOBox="true" />
+        </Canvas>
+        <Patch Id="@ID(create)" Name="Create" />
+        <Patch Id="@ID(update)" Name="Update" />
+        <ProcessDefinition Id="@ID(procdef)">
+          <Fragment Id="@ID(frag-create)" Patch="@ID(create)" Enabled="true" />
+          <Fragment Id="@ID(frag-update)" Patch="@ID(update)" Enabled="true" />
+        </ProcessDefinition>
+        <Link Id="@ID(l-texture)" Ids="@ID(ft-texture),@ID(mp-texture)" />
+        <Link Id="@ID(l-source)" Ids="@ID(pad-source),@ID(mp-source)" />
+        <Link Id="@ID(l-state-hands)" Ids="@ID(mp-stateout),@ID(hd-input)" />
+        <Link Id="@ID(l-state-timings)" Ids="@ID(mp-stateout),@ID(tm-input)" />
+        <Link Id="@ID(l-landmarks)" Ids="@ID(hd-landmarks),@ID(pr-landmarks)" />
+        <Link Id="@ID(l-frameid)" Ids="@ID(tm-frameid),@ID(pr-frameid)" />
+        <Link Id="@ID(l-latency)" Ids="@ID(tm-latency),@ID(pr-latency)" />
+        <Link Id="@ID(l-detect)" Ids="@ID(tm-detect),@ID(pr-detect)" />
+        <Link Id="@ID(l-camera)" Ids="@ID(pad-camera),@ID(pr-camera)" />
+        <Link Id="@ID(l-done)" Ids="@ID(pr-done),@ID(pad-done)" />
+        <Link Id="@ID(l-frameid-pad)" Ids="@ID(tm-frameid),@ID(pad-frameid)" />
+        <Link Id="@ID(l-latency-pad)" Ids="@ID(tm-latency),@ID(pad-latency)" />
+      </Patch>
+    </Node>
+  </Patch>
+</Document>

@@ -42,7 +42,7 @@
         public Resolution Resolution { get; set; }
     }
 
-    public class Poseresults
+    public partial class Poseresults
     {
         public Landmark[][] Landmarks { get; set; }
         public Worldlandmark[][] WorldLandmarks { get; set; }

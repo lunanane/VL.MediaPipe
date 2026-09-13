@@ -8,7 +8,7 @@ namespace VL.MediaPipe.ObjectResults
         public Resolution Resolution { get; set; }
     }
 
-    public class Objectresults
+    public partial class Objectresults
     {
         [JsonPropertyName("detections")]
         public ObjectDescription[] Objects { get; set; }

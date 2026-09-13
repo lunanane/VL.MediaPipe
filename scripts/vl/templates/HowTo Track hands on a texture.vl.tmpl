@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document xmlns:p="property" xmlns:r="reflection" Id="@ID(doc)" LanguageVersion="2025.7.4-0008-g793e4b395d" Version="0.128">
+  <NugetDependency Id="@ID(dep-corelib)" Location="VL.CoreLib" />
+  <NugetDependency Id="@ID(dep-stride)" Location="VL.Stride" />
+  <NugetDependency Id="@ID(dep-cef-stride)" Location="VL.CEF.Stride" Version="0.8.2" />
+  <NugetDependency Id="@ID(dep-mediapipe)" Location="VL.MediaPipe" />
+  <PlatformDependency Id="@ID(dep-mediapipe-dll)" Location="../lib/net8.0/VL.MediaPipe.dll" />
+  <Patch Id="@ID(root-patch)">
+    <Canvas Id="@ID(root-canvas)" DefaultCategory="Main" CanvasType="FullCategory" />
+    <Node Name="Application" Bounds="100,100" Id="@ID(app)">
+      <p:NodeReference>
+        <Choice Kind="ContainerDefinition" Name="Process" />
+        <FullNameCategoryReference ID="Primitive" />
+      </p:NodeReference>
+      <Patch Id="@ID(app-patch)">
+        <Canvas Id="@ID(app-canvas)" CanvasType="Group">
+          <Pad Id="@ID(pad-title)" Bounds="60,20,560,50" ShowValueBox="true" isIOBox="true" Value="Track hands on a texture instead of a webcam. With Source = Texture the MediaPipe node reads Input Texture back from the GPU and sends it to its browser page, which runs the enabled detectors on it.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">11</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Pad Id="@ID(pad-path)" Comment="Path" Bounds="62,90,160,15" ShowValueBox="true" isIOBox="true" Value="hand_rgb_sample.jpg">
+            <p:TypeAnnotation LastCategoryFullName="IO" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="Path" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Pad Id="@ID(pad-srgb)" Comment="Is sRGB" Bounds="252,90,35,35" ShowValueBox="true" isIOBox="true" Value="False">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="ImmutableTypeFlag" Name="Boolean" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:buttonmode p:Assembly="VL.UI.Forms" p:Type="VL.HDE.PatchEditor.Editors.ButtonModeEnum">Toggle</p:buttonmode>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Pad Id="@ID(pad-srgb-note)" Bounds="300,95,320,30" ShowValueBox="true" isIOBox="true" Value="False: the file's color values go to MediaPipe unchanged. The texture is read back as R8G8B8A8_UNorm.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Node Bounds="60,150,125,19" Id="@ID(n-filetexture)">
+            <p:NodeReference LastCategoryFullName="Stride.Assets" LastDependency="VL.Stride.Assets.Windows.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="FileTexture" />
+            </p:NodeReference>
+            <Pin Id="@ID(ft-path)" Name="Path" Kind="InputPin" />
+            <Pin Id="@ID(ft-mips)" Name="Generate Mipmaps" Kind="InputPin" DefaultValue="False" />
+            <Pin Id="@ID(ft-srgb)" Name="Is sRGB" Kind="InputPin" />
+            <Pin Id="@ID(ft-texture)" Name="Texture" Kind="OutputPin" />
+          </Node>
+          <Pad Id="@ID(pad-hands)" Comment="Detect hands" Bounds="62,200,35,35" ShowValueBox="true" isIOBox="true" Value="True">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="ImmutableTypeFlag" Name="Boolean" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:buttonmode p:Assembly="VL.UI.Forms" p:Type="VL.HDE.PatchEditor.Editors.ButtonModeEnum">Toggle</p:buttonmode>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Pad Id="@ID(pad-source)" Comment="Source" Bounds="202,215,70,15" ShowValueBox="true" isIOBox="true" Value="Texture">
+            <p:TypeAnnotation LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.dll">
+              <Choice Kind="TypeFlag" Name="InputSource" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Pad Id="@ID(pad-maxsize)" Comment="Max Input Size" Bounds="302,215,40,15" ShowValueBox="true" isIOBox="true" Value="0">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="Integer32" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Pad Id="@ID(pad-maxsize-note)" Bounds="360,210,260,30" ShowValueBox="true" isIOBox="true" Value="0 sends the texture at its own size; e.g. 640 scales it down on the GPU so its longer side is 640 px.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Pad Id="@ID(pad-enabled)" Comment="Enabled" Bounds="422,250,35,35" ShowValueBox="true" isIOBox="true" Value="True">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="ImmutableTypeFlag" Name="Boolean" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:buttonmode p:Assembly="VL.UI.Forms" p:Type="VL.HDE.PatchEditor.Editors.ButtonModeEnum">Toggle</p:buttonmode>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Node Bounds="60,300,385,19" Id="@ID(n-mediapipe)">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="MediaPipe" />
+            </p:NodeReference>
+            <p:HelpFocus p:Assembly="VL.Lang" p:Type="VL.Model.HelpPriority">High</p:HelpFocus>
+            <Pin Id="@ID(mp-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="@ID(mp-hands)" Name="Detect hands" Kind="InputPin" />
+            <Pin Id="@ID(mp-overlays)" Name="Show overlays" Kind="InputPin" DefaultValue="True" />
+            <Pin Id="@ID(mp-source)" Name="Source" Kind="InputPin" />
+            <Pin Id="@ID(mp-texture)" Name="Input Texture" Kind="InputPin" />
+            <Pin Id="@ID(mp-maxsize)" Name="Max Input Size" Kind="InputPin" />
+            <Pin Id="@ID(mp-stateout)" Name="State Output" Kind="OutputPin" />
+            <Pin Id="@ID(mp-output)" Name="Output" Kind="OutputPin" />
+            <Pin Id="@ID(mp-enabled)" Name="Enabled" Kind="InputPin" />
+          </Node>
+          <Node Bounds="460,380,95,19" Id="@ID(n-tostride)">
+            <p:NodeReference LastCategoryFullName="CEF" LastDependency="VL.CEF.Stride.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="ToStrideRenderer" />
+            </p:NodeReference>
+            <Pin Id="@ID(ts-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="@ID(ts-browser)" Name="Browser" Kind="InputPin" />
+            <Pin Id="@ID(ts-output)" Name="Output" Kind="OutputPin" />
+          </Node>
+          <Node Bounds="460,440,165,19" Id="@ID(n-window)">
+            <p:NodeReference LastCategoryFullName="Stride" LastDependency="VL.Stride.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="RenderWindow" />
+            </p:NodeReference>
+            <Pin Id="@ID(rw-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="@ID(rw-bounds)" Name="Bounds" Kind="InputPin" DefaultValue="1100, 80, 420, 420" IsHidden="true" />
+            <Pin Id="@ID(rw-input)" Name="Input" Kind="InputPin" />
+            <Pin Id="@ID(rw-title)" Name="Title" Kind="InputPin" DefaultValue="MediaPipe page: received texture + landmarks" />
+          </Node>
+          <Pad Id="@ID(pad-preview-note)" Bounds="640,375,230,70" ShowValueBox="true" isIOBox="true" Value="Preview of the browser page: the frame it received and the landmarks it drew. Red node? Install VL.CEF.Stride; it is only needed for this preview.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Node Bounds="60,380,85,19" Id="@ID(n-hands)">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="HandDetector" />
+            </p:NodeReference>
+            <Pin Id="@ID(hd-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="@ID(hd-input)" Name="Input" Kind="InputPin" />
+            <Pin Id="@ID(hd-max)" Name="Max Number of Hands" Kind="InputPin" DefaultValue="1" />
+            <Pin Id="@ID(hd-landmarks)" Name="Landmarks" Kind="OutputPin" />
+          </Node>
+          <Pad Id="@ID(pad-landmarks)" Comment="Landmarks" Bounds="62,430,300,120" ShowValueBox="true" isIOBox="true" />
+          <Node Bounds="260,380,125,19" Id="@ID(n-timings)">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="Timings" />
+            </p:NodeReference>
+            <p:HelpFocus p:Assembly="VL.Lang" p:Type="VL.Model.HelpPriority">High</p:HelpFocus>
+            <Pin Id="@ID(tm-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="@ID(tm-input)" Name="Input" Kind="InputPin" />
+            <Pin Id="@ID(tm-detect)" Name="Detection Time" Kind="OutputPin" />
+            <Pin Id="@ID(tm-draw)" Name="Draw Time" Kind="OutputPin" />
+            <Pin Id="@ID(tm-rate)" Name="Source Frame Rate" Kind="OutputPin" />
+            <Pin Id="@ID(tm-frameid)" Name="Frame Id" Kind="OutputPin" />
+            <Pin Id="@ID(tm-latency)" Name="Frame Latency (ms)" Kind="OutputPin" />
+          </Node>
+          <Pad Id="@ID(pad-detect)" Comment="Detection Time" Bounds="372,590,40,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="@ID(pad-rate)" Comment="Source Frame Rate" Bounds="372,615,40,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="@ID(pad-frameid)" Comment="Frame Id" Bounds="372,640,60,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="@ID(pad-latency)" Comment="Frame Latency (ms)" Bounds="372,665,60,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="@ID(pad-timings-note)" Bounds="450,585,420,100" ShowValueBox="true" isIOBox="true" Value="Every texture frame gets an id. The page echoes it back with its results, so Frame Id says which frame the current results belong to, and Frame Latency (ms) is the time from sending that frame to receiving its results, measured on vvvv's clock (it includes Detection Time). A new frame is only sent once the page has answered the previous one; frames in between are skipped, so latency does not pile up.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+        </Canvas>
+        <Patch Id="@ID(create)" Name="Create" />
+        <Patch Id="@ID(update)" Name="Update" />
+        <ProcessDefinition Id="@ID(procdef)">
+          <Fragment Id="@ID(frag-create)" Patch="@ID(create)" Enabled="true" />
+          <Fragment Id="@ID(frag-update)" Patch="@ID(update)" Enabled="true" />
+        </ProcessDefinition>
+        <Link Id="@ID(l-path)" Ids="@ID(pad-path),@ID(ft-path)" />
+        <Link Id="@ID(l-srgb)" Ids="@ID(pad-srgb),@ID(ft-srgb)" />
+        <Link Id="@ID(l-texture)" Ids="@ID(ft-texture),@ID(mp-texture)" />
+        <Link Id="@ID(l-hands)" Ids="@ID(pad-hands),@ID(mp-hands)" />
+        <Link Id="@ID(l-source)" Ids="@ID(pad-source),@ID(mp-source)" />
+        <Link Id="@ID(l-maxsize)" Ids="@ID(pad-maxsize),@ID(mp-maxsize)" />
+        <Link Id="@ID(l-enabled)" Ids="@ID(pad-enabled),@ID(mp-enabled)" />
+        <Link Id="@ID(l-browser)" Ids="@ID(mp-output),@ID(ts-browser)" />
+        <Link Id="@ID(l-window)" Ids="@ID(ts-output),@ID(rw-input)" />
+        <Link Id="@ID(l-state-hands)" Ids="@ID(mp-stateout),@ID(hd-input)" />
+        <Link Id="@ID(l-state-timings)" Ids="@ID(mp-stateout),@ID(tm-input)" />
+        <Link Id="@ID(l-landmarks)" Ids="@ID(hd-landmarks),@ID(pad-landmarks)" />
+        <Link Id="@ID(l-detect)" Ids="@ID(tm-detect),@ID(pad-detect)" />
+        <Link Id="@ID(l-rate)" Ids="@ID(tm-rate),@ID(pad-rate)" />
+        <Link Id="@ID(l-frameid)" Ids="@ID(tm-frameid),@ID(pad-frameid)" />
+        <Link Id="@ID(l-latency)" Ids="@ID(tm-latency),@ID(pad-latency)" />
+      </Patch>
+    </Node>
+  </Patch>
+</Document>

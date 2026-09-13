@@ -6,7 +6,7 @@
         public Resolution Resolution { get; set; }
     }
 
-    public class Facelandmarkresults
+    public partial class Facelandmarkresults
     {
         public Facelandmark[][] FaceLandmarks { get; set; }
         public Faceblendshape[] FaceBlendshapes { get; set; }

@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document xmlns:p="property" xmlns:r="reflection" Id="ViGoJFN4LPznFBcFWjdjRm" LanguageVersion="2025.7.4-0008-g793e4b395d" Version="0.128">
+  <NugetDependency Id="GYcBdTw00ER4inKXUh9olp" Location="VL.CoreLib" />
+  <NugetDependency Id="KHhbUlvH20Uu5dXv5FHtMn" Location="VL.Stride" />
+  <NugetDependency Id="JHHqK0GzSmNGnrO9uJ3bQ9" Location="VL.CEF.Stride" Version="0.8.2" />
+  <NugetDependency Id="GqYtGIWQIOkyZHGStbt053" Location="VL.MediaPipe" />
+  <PlatformDependency Id="LM0dBe1oUhcN7nZH1vz6l9" Location="../lib/net8.0/VL.MediaPipe.dll" />
+  <Patch Id="NIDCNupBJzfmdIDkhKF9V8">
+    <Canvas Id="OyJIrrnA8v6mgp58Fr70G2" DefaultCategory="Main" CanvasType="FullCategory" />
+    <Node Name="Application" Bounds="100,100" Id="Pd2yfNdu8K8ZbNXkKjsnUd">
+      <p:NodeReference>
+        <Choice Kind="ContainerDefinition" Name="Process" />
+        <FullNameCategoryReference ID="Primitive" />
+      </p:NodeReference>
+      <Patch Id="NNMVfyKAdvLECjeBGOzdQW">
+        <Canvas Id="E5JnbvF61sIieXKUjp6KR1" CanvasType="Group">
+          <Pad Id="EPROdTrNtvnUcaBESV5eS3" Bounds="60,20,560,50" ShowValueBox="true" isIOBox="true" Value="Track hands on a texture instead of a webcam. With Source = Texture the MediaPipe node reads Input Texture back from the GPU and sends it to its browser page, which runs the enabled detectors on it.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">11</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Pad Id="ZLvlFlAsm8Rs1h5UydV1Fy" Comment="Path" Bounds="62,90,160,15" ShowValueBox="true" isIOBox="true" Value="hand_rgb_sample.jpg">
+            <p:TypeAnnotation LastCategoryFullName="IO" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="Path" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Pad Id="F0icHYdeMlnDNvNEhsurTM" Comment="Is sRGB" Bounds="252,90,35,35" ShowValueBox="true" isIOBox="true" Value="False">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="ImmutableTypeFlag" Name="Boolean" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:buttonmode p:Assembly="VL.UI.Forms" p:Type="VL.HDE.PatchEditor.Editors.ButtonModeEnum">Toggle</p:buttonmode>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Pad Id="Ehi1ofMVdr2SqxUJLPqODa" Bounds="300,95,320,30" ShowValueBox="true" isIOBox="true" Value="False: the file's color values go to MediaPipe unchanged. The texture is read back as R8G8B8A8_UNorm.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Node Bounds="60,150,125,19" Id="SBzKr4nqU3t9tctLFNyKIH">
+            <p:NodeReference LastCategoryFullName="Stride.Assets" LastDependency="VL.Stride.Assets.Windows.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="FileTexture" />
+            </p:NodeReference>
+            <Pin Id="VVDNFmN4018aYGn5Mn1jGt" Name="Path" Kind="InputPin" />
+            <Pin Id="Y4qFUn56F9fyelKywtnD86" Name="Generate Mipmaps" Kind="InputPin" DefaultValue="False" />
+            <Pin Id="JRSBUZzbe4zl5VVP8Aeqc9" Name="Is sRGB" Kind="InputPin" />
+            <Pin Id="PuuwDNRFEjq3e7Rq8ddNd3" Name="Texture" Kind="OutputPin" />
+          </Node>
+          <Pad Id="WUo9YdjLNaEEGDBQS6ZI0h" Comment="Detect hands" Bounds="62,200,35,35" ShowValueBox="true" isIOBox="true" Value="True">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="ImmutableTypeFlag" Name="Boolean" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:buttonmode p:Assembly="VL.UI.Forms" p:Type="VL.HDE.PatchEditor.Editors.ButtonModeEnum">Toggle</p:buttonmode>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Pad Id="T6v5dYyk7LKObJe5kcdFtn" Comment="Source" Bounds="202,215,70,15" ShowValueBox="true" isIOBox="true" Value="Texture">
+            <p:TypeAnnotation LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.dll">
+              <Choice Kind="TypeFlag" Name="InputSource" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Pad Id="GimYhozUU6USsOqSRab2Cp" Comment="Max Input Size" Bounds="302,215,40,15" ShowValueBox="true" isIOBox="true" Value="0">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="Integer32" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Pad Id="WhtVNOTE71yi2zGTEWFtNM" Bounds="360,210,260,30" ShowValueBox="true" isIOBox="true" Value="0 sends the texture at its own size; e.g. 640 scales it down on the GPU so its longer side is 640 px.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Pad Id="PykEa4TyWo5VX7YgVgLjlR" Comment="Enabled" Bounds="422,250,35,35" ShowValueBox="true" isIOBox="true" Value="True">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="ImmutableTypeFlag" Name="Boolean" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:buttonmode p:Assembly="VL.UI.Forms" p:Type="VL.HDE.PatchEditor.Editors.ButtonModeEnum">Toggle</p:buttonmode>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Node Bounds="60,300,385,19" Id="CeBs9yTRPsjwgRdfjXeMMl">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="MediaPipe" />
+            </p:NodeReference>
+            <p:HelpFocus p:Assembly="VL.Lang" p:Type="VL.Model.HelpPriority">High</p:HelpFocus>
+            <Pin Id="ZBABoC5tFvRmhsQjEFr7vZ" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="Amnc9Nm7ms8o0Q20Yv3QVY" Name="Detect hands" Kind="InputPin" />
+            <Pin Id="JxxAxm1nn2J987Q45zRGI9" Name="Show overlays" Kind="InputPin" DefaultValue="True" />
+            <Pin Id="EwoobmP7FgeeIu39VCXOu9" Name="Source" Kind="InputPin" />
+            <Pin Id="N3a7K6kIE7JXGRZfMiFGdg" Name="Input Texture" Kind="InputPin" />
+            <Pin Id="KGWR7zAydFuORJvCj12a5H" Name="Max Input Size" Kind="InputPin" />
+            <Pin Id="DSiDamBK8VRDCvrLhyq1Qn" Name="State Output" Kind="OutputPin" />
+            <Pin Id="CPdM4CkxQoIG3GoNFraT9e" Name="Output" Kind="OutputPin" />
+            <Pin Id="HKrRh9makHl6WwyGDk7npD" Name="Enabled" Kind="InputPin" />
+          </Node>
+          <Node Bounds="460,380,95,19" Id="M791nnI3p53j5VR4JM9ogh">
+            <p:NodeReference LastCategoryFullName="CEF" LastDependency="VL.CEF.Stride.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="ToStrideRenderer" />
+            </p:NodeReference>
+            <Pin Id="WLnhKBTDbHT9qLW4RGg9Ud" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="VGrT83td4QkPBg6kgcbEXx" Name="Browser" Kind="InputPin" />
+            <Pin Id="EpMBX3rj4uR5pYFH04cKNn" Name="Output" Kind="OutputPin" />
+          </Node>
+          <Node Bounds="460,440,165,19" Id="EXHi8ttmX5FYgd1cjiOvtr">
+            <p:NodeReference LastCategoryFullName="Stride" LastDependency="VL.Stride.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="RenderWindow" />
+            </p:NodeReference>
+            <Pin Id="Pv0cKwO2dtWERdrd87h1Yf" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="ZpULvTbpD9ZDiMqZaNGtYI" Name="Bounds" Kind="InputPin" DefaultValue="1100, 80, 420, 420" IsHidden="true" />
+            <Pin Id="BlVHEPTf4KCqxkVCN0u2TZ" Name="Input" Kind="InputPin" />
+            <Pin Id="PhTJVM56TVaJahDoiaHLl6" Name="Title" Kind="InputPin" DefaultValue="MediaPipe page: received texture + landmarks" />
+          </Node>
+          <Pad Id="P8KB9ZX73c9SsM05dsc7t1" Bounds="640,375,230,70" ShowValueBox="true" isIOBox="true" Value="Preview of the browser page: the frame it received and the landmarks it drew. Red node? Install VL.CEF.Stride; it is only needed for this preview.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Node Bounds="60,380,85,19" Id="NV5dp51Pg48MYz4BK9rrA6">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="HandDetector" />
+            </p:NodeReference>
+            <Pin Id="KiVXpdd0BXlvburv4MAf8g" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="NNI8EZbsFqJdCoUmZE3bKU" Name="Input" Kind="InputPin" />
+            <Pin Id="CROxbu1qtLrcdFZaC6s82F" Name="Max Number of Hands" Kind="InputPin" DefaultValue="1" />
+            <Pin Id="CbMtpYZa56XheN7oiVSMqB" Name="Landmarks" Kind="OutputPin" />
+          </Node>
+          <Pad Id="TD8mrF6InOgDUetuejkr0B" Comment="Landmarks" Bounds="62,430,300,120" ShowValueBox="true" isIOBox="true" />
+          <Node Bounds="260,380,125,19" Id="MdXH1JS2jkS936URvMlxOA">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="Timings" />
+            </p:NodeReference>
+            <p:HelpFocus p:Assembly="VL.Lang" p:Type="VL.Model.HelpPriority">High</p:HelpFocus>
+            <Pin Id="C61LgpGLIRF0tlvujljXN0" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="ZGqSF2SIliyohc1DU8Pmkk" Name="Input" Kind="InputPin" />
+            <Pin Id="FnJn47JO31WrBvFkYiwRFO" Name="Detection Time" Kind="OutputPin" />
+            <Pin Id="Nd9lP1oEy6T30BkHWJuKXE" Name="Draw Time" Kind="OutputPin" />
+            <Pin Id="CCkMsP0qVShKD4dXPDBIjV" Name="Source Frame Rate" Kind="OutputPin" />
+            <Pin Id="KV6TojjSRgcXIxH5qYg8cU" Name="Frame Id" Kind="OutputPin" />
+            <Pin Id="U5fDenH1OqxJBqxty4Z34p" Name="Frame Latency (ms)" Kind="OutputPin" />
+          </Node>
+          <Pad Id="T5qzIVdACzs87UFINl6cNS" Comment="Detection Time" Bounds="372,590,40,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="BKv6AgEKqsPu5FlIrGAutE" Comment="Source Frame Rate" Bounds="372,615,40,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="O8G6QDdUuo7WV9EnBZKBhR" Comment="Frame Id" Bounds="372,640,60,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="SriEWfYAFqdcEoDAz4syth" Comment="Frame Latency (ms)" Bounds="372,665,60,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="Kpt8nXxdVo6lLWb51ukZMA" Bounds="450,585,420,100" ShowValueBox="true" isIOBox="true" Value="Every texture frame gets an id. The page echoes it back with its results, so Frame Id says which frame the current results belong to, and Frame Latency (ms) is the time from sending that frame to receiving its results, measured on vvvv's clock (it includes Detection Time). A new frame is only sent once the page has answered the previous one; frames in between are skipped, so latency does not pile up.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+        </Canvas>
+        <Patch Id="IBRoqMTWZW8vWSUhrgBGCy" Name="Create" />
+        <Patch Id="IbNqE844IIxsGtVe7ZhVqp" Name="Update" />
+        <ProcessDefinition Id="EDO5vToi9SQ9KEXW45NgRe">
+          <Fragment Id="Tqd4RO7C2crsG80QKIfqPe" Patch="IBRoqMTWZW8vWSUhrgBGCy" Enabled="true" />
+          <Fragment Id="L0hepTnW3F8PZtCjSeH89k" Patch="IbNqE844IIxsGtVe7ZhVqp" Enabled="true" />
+        </ProcessDefinition>
+        <Link Id="Sk18xZaLXGbklDzfWYF1PU" Ids="ZLvlFlAsm8Rs1h5UydV1Fy,VVDNFmN4018aYGn5Mn1jGt" />
+        <Link Id="WL5TOVB4f8H80AIz3DWqFB" Ids="F0icHYdeMlnDNvNEhsurTM,JRSBUZzbe4zl5VVP8Aeqc9" />
+        <Link Id="C0nP9vGCMog1i9dsXHqtAY" Ids="PuuwDNRFEjq3e7Rq8ddNd3,N3a7K6kIE7JXGRZfMiFGdg" />
+        <Link Id="A9gDfRUAHYumwZZMSqsptT" Ids="WUo9YdjLNaEEGDBQS6ZI0h,Amnc9Nm7ms8o0Q20Yv3QVY" />
+        <Link Id="VAAoch54mpnhfyjGIyO226" Ids="T6v5dYyk7LKObJe5kcdFtn,EwoobmP7FgeeIu39VCXOu9" />
+        <Link Id="XwxzV02DWgn5mfmCsrfrg6" Ids="GimYhozUU6USsOqSRab2Cp,KGWR7zAydFuORJvCj12a5H" />
+        <Link Id="S4sakM7IobwDRglkKEPktl" Ids="PykEa4TyWo5VX7YgVgLjlR,HKrRh9makHl6WwyGDk7npD" />
+        <Link Id="Ot1DH8u4vofGUeSB9JSZyQ" Ids="CPdM4CkxQoIG3GoNFraT9e,VGrT83td4QkPBg6kgcbEXx" />
+        <Link Id="Bdq8yakCLQXYh11CO39hB3" Ids="EpMBX3rj4uR5pYFH04cKNn,BlVHEPTf4KCqxkVCN0u2TZ" />
+        <Link Id="NWYFWpeL921d8SKx0IwRdX" Ids="DSiDamBK8VRDCvrLhyq1Qn,NNI8EZbsFqJdCoUmZE3bKU" />
+        <Link Id="Db9Go0usa1jsbHyMRc5Z9R" Ids="DSiDamBK8VRDCvrLhyq1Qn,ZGqSF2SIliyohc1DU8Pmkk" />
+        <Link Id="Fh0seFb7o3eZMRiv2O5i1V" Ids="CbMtpYZa56XheN7oiVSMqB,TD8mrF6InOgDUetuejkr0B" />
+        <Link Id="XGKHDSQ5pQ3OcTJOMa06oz" Ids="FnJn47JO31WrBvFkYiwRFO,T5qzIVdACzs87UFINl6cNS" />
+        <Link Id="LDrKDb6xLQ5QYDs6MYmNUj" Ids="CCkMsP0qVShKD4dXPDBIjV,BKv6AgEKqsPu5FlIrGAutE" />
+        <Link Id="UDpjNwnmtGFZP7J4Dyj4Sw" Ids="KV6TojjSRgcXIxH5qYg8cU,O8G6QDdUuo7WV9EnBZKBhR" />
+        <Link Id="XSiuvQCZ2nH7vfE87f1Vqw" Ids="U5fDenH1OqxJBqxty4Z34p,SriEWfYAFqdcEoDAz4syth" />
+      </Patch>
+    </Node>
+  </Patch>
+</Document>

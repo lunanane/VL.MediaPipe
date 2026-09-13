@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document xmlns:p="property" xmlns:r="reflection" Id="ReGJemxyqDWdQDGyv5nr8C" LanguageVersion="2025.7.4-0008-g793e4b395d" Version="0.128">
+  <NugetDependency Id="A60CEpOjsZVUuUckKTnwW3" Location="VL.CoreLib" />
+  <NugetDependency Id="FAf6qj9RjUEvWsKYCqO3kB" Location="VL.Stride" />
+  <NugetDependency Id="XteJyOfvsqvH3XlqUtRDrD" Location="VL.MediaPipe" />
+  <PlatformDependency Id="HPTBSM5SV4OW5eLfifzxIG" Location="../lib/net8.0/VL.MediaPipe.dll" />
+  <PlatformDependency Id="A968w5XI8dpduZ36kM8hks" Location="lib/net8.0/VL.MediaPipe.TextureHarness.dll" />
+  <Patch Id="P0ExX9ahlYsmL5HUggJ7KG">
+    <Canvas Id="RNHhWZgH4moNe5ugCx7pFu" DefaultCategory="Main" CanvasType="FullCategory" />
+    <Node Name="Application" Bounds="100,100" Id="Ji4CpS4Igfr3qXB5DGzwTI">
+      <p:NodeReference>
+        <Choice Kind="ContainerDefinition" Name="Process" />
+        <FullNameCategoryReference ID="Primitive" />
+      </p:NodeReference>
+      <Patch Id="JUUWBgNzXW7JT9IrEa2BSe">
+        <Canvas Id="LXv43O4DtlY7YFV3osbrNR" CanvasType="Group">
+          <Pad Id="LS12N1o7YkqqLaZ6TasPYX" Bounds="60,20,520,40" ShowValueBox="true" isIOBox="true" Value="Texture input harness: tracks hands on a still image fed as a texture. scripts\run-texture-harness.ps1 copies the fixture next to it and greps the TEXTURE HARNESS lines in vvvv's log.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
+          <Node Bounds="60,100,125,19" Id="WluYqbSW5MndLU4GLuDbis">
+            <p:NodeReference LastCategoryFullName="Stride.Assets" LastDependency="VL.Stride.Assets.Windows.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="FileTexture" />
+            </p:NodeReference>
+            <Pin Id="WFuBUpiBluc62SYnw5gpmt" Name="Path" Kind="InputPin" DefaultValue="..\results\texture-harness\hand_rgb_sample.jpg">
+              <p:TypeAnnotation LastCategoryFullName="IO" LastDependency="VL.CoreLib.vl">
+                <Choice Kind="TypeFlag" Name="Path" />
+              </p:TypeAnnotation>
+            </Pin>
+            <Pin Id="FDIFHnazpl0mKhu5wVQOYJ" Name="Generate Mipmaps" Kind="InputPin" DefaultValue="False" />
+            <Pin Id="FHuWJ2lOFG9lXwiTZvLcmG" Name="Is sRGB" Kind="InputPin" DefaultValue="False" />
+            <Pin Id="DzpisU34Fg46BiwZ7aPBL5" Name="Texture" Kind="OutputPin" />
+          </Node>
+          <Pad Id="KuMlF2bDREoHAIMtar08Ln" Comment="Source" Bounds="240,130,70,15" ShowValueBox="true" isIOBox="true" Value="Texture">
+            <p:TypeAnnotation LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.dll">
+              <Choice Kind="TypeFlag" Name="InputSource" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Node Bounds="60,180,305,19" Id="Uca8QP3bnvOELHcpegNw6z">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="MediaPipe" />
+            </p:NodeReference>
+            <Pin Id="AHcs6ByxsOQQ2YsPq3FRCP" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="Oby0TlxrpWi58VM2YPj5pL" Name="Detect hands" Kind="InputPin" DefaultValue="True" />
+            <Pin Id="ZKnbgD3034btll7J6TVDeN" Name="Show overlays" Kind="InputPin" DefaultValue="True" />
+            <Pin Id="XHNdmYy5064XeGX7umoFdW" Name="Source" Kind="InputPin" />
+            <Pin Id="GhihFaFqEbTUwqtOhHlAIM" Name="Input Texture" Kind="InputPin" />
+            <Pin Id="MoO0309FDmgqBUqtfEyIWB" Name="State Output" Kind="OutputPin" />
+            <Pin Id="CMUVUQgOtWfcSZjDQJrJUS" Name="Output" Kind="OutputPin" />
+            <Pin Id="Y4k8Fk0qzlWlRh0igzH8Yk" Name="Enabled" Kind="InputPin" DefaultValue="True" />
+          </Node>
+          <Node Bounds="60,260,85,19" Id="QwSOOM0iALMprBBamf8IGy">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="HandDetector" />
+            </p:NodeReference>
+            <Pin Id="H6mbjNTK51TSlVAKwnBCEj" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="FAyWdvMsAg3uTydJfYSSmM" Name="Input" Kind="InputPin" />
+            <Pin Id="PIGiBVcSrbdrSoOqxZZCAu" Name="Max Number of Hands" Kind="InputPin" DefaultValue="1" />
+            <Pin Id="GCAEeMU4ZVoCki4RALsoh6" Name="Landmarks" Kind="OutputPin" />
+          </Node>
+          <Node Bounds="260,260,125,19" Id="BlS6lc4loAFVCNj0iTHWAE">
+            <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="Timings" />
+            </p:NodeReference>
+            <Pin Id="I4z5lTkzfKCXK7s4RMisFy" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="X8LnLmUJ34uCpAoCzN2yJU" Name="Input" Kind="InputPin" />
+            <Pin Id="ZDiCJZgR6J1WMyMhSOgFa5" Name="Detection Time" Kind="OutputPin" />
+            <Pin Id="MBg2VktQka2ojeOBcS4IzA" Name="Frame Id" Kind="OutputPin" />
+            <Pin Id="Io56ilkNTDxGxrYossp0My" Name="Frame Latency (ms)" Kind="OutputPin" />
+          </Node>
+          <Pad Id="ZRRxeBUujPhmcZYR8NyCeg" Comment="Camera" Bounds="460,300,120,15" ShowValueBox="true" isIOBox="true">
+            <p:TypeAnnotation LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.dll">
+              <Choice Kind="TypeFlag" Name="CamerasEnum" />
+            </p:TypeAnnotation>
+          </Pad>
+          <Node Bounds="60,360,405,19" Id="QcQgRh7i1Y5hJSp5MiSL5G">
+            <p:NodeReference LastCategoryFullName="MediaPipe.Test" LastDependency="VL.MediaPipe.TextureHarness.dll">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="ProcessAppFlag" Name="TextureInputProbe" />
+            </p:NodeReference>
+            <Pin Id="DlDhw0chlVCCjogK4SoLvX" Name="Node Context" Kind="InputPin" IsHidden="true" />
+            <Pin Id="DkROoELc1n5DEOlaKjT0uP" Name="Landmarks" Kind="InputPin" />
+            <Pin Id="WAmXeuQvIfhpMg5EFVKFI1" Name="Frame Id" Kind="InputPin" />
+            <Pin Id="AzOa3EhqkhBZpHEwfNrx4b" Name="Frame Latency" Kind="InputPin" />
+            <Pin Id="GC5TH4PaNtQMTrw11AEmgC" Name="Detection Time" Kind="InputPin" />
+            <Pin Id="ERqkEwoPeOZUdIhQ4axcAJ" Name="Camera" Kind="InputPin" />
+            <Pin Id="QBEBLlVBn8x9qZNBcaLWwh" Name="Target Frames" Kind="InputPin" DefaultValue="150" />
+            <Pin Id="XLwyvMx7jVzXf9PTKhHMqZ" Name="Done" Kind="OutputPin" />
+          </Node>
+          <Pad Id="D1nq51alpeBgjtvIv8m6bP" Comment="Frame Id" Bounds="300,320,50,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="DyH5rDXpupYFnuZJekhz8m" Comment="Frame Latency (ms)" Bounds="370,320,60,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="NHx2J8xJYshlwoflMObjFk" Comment="Done" Bounds="60,420,35,35" ShowValueBox="true" isIOBox="true" />
+        </Canvas>
+        <Patch Id="HUZIHWNnEWWG854JWgB4cc" Name="Create" />
+        <Patch Id="KIN2dIa9nH9Jw9VT8utgBw" Name="Update" />
+        <ProcessDefinition Id="GvX1w0iEO7vO0Cnmfd91ik">
+          <Fragment Id="PyezQrtyTb4GdNoije8VEF" Patch="HUZIHWNnEWWG854JWgB4cc" Enabled="true" />
+          <Fragment Id="DJU8cH038qt74BooHY5LeB" Patch="KIN2dIa9nH9Jw9VT8utgBw" Enabled="true" />
+        </ProcessDefinition>
+        <Link Id="V71LVkPbkCQiN37VqiOkla" Ids="DzpisU34Fg46BiwZ7aPBL5,GhihFaFqEbTUwqtOhHlAIM" />
+        <Link Id="Y8aXYFdGXQr7dF5kBtbfvd" Ids="KuMlF2bDREoHAIMtar08Ln,XHNdmYy5064XeGX7umoFdW" />
+        <Link Id="FxvgsMHz35IbiA4ZRYtq78" Ids="MoO0309FDmgqBUqtfEyIWB,FAyWdvMsAg3uTydJfYSSmM" />
+        <Link Id="HxlqacLjKVhRWSDNBoYVku" Ids="MoO0309FDmgqBUqtfEyIWB,X8LnLmUJ34uCpAoCzN2yJU" />
+        <Link Id="Hd5ezINiDqE6pqacwed1vU" Ids="GCAEeMU4ZVoCki4RALsoh6,DkROoELc1n5DEOlaKjT0uP" />
+        <Link Id="M3v1XmngWkvUsZKlJ8AooD" Ids="MBg2VktQka2ojeOBcS4IzA,WAmXeuQvIfhpMg5EFVKFI1" />
+        <Link Id="Wbb1zVVHdd3aqth49yWMXw" Ids="Io56ilkNTDxGxrYossp0My,AzOa3EhqkhBZpHEwfNrx4b" />
+        <Link Id="O2cMbmG8WLuVExKMSG2Di6" Ids="ZDiCJZgR6J1WMyMhSOgFa5,GC5TH4PaNtQMTrw11AEmgC" />
+        <Link Id="HjQ3em0LAS52B9ahLRiOIw" Ids="ZRRxeBUujPhmcZYR8NyCeg,ERqkEwoPeOZUdIhQ4axcAJ" />
+        <Link Id="U4GKJPn3zxichHS1OW9AGr" Ids="XLwyvMx7jVzXf9PTKhHMqZ,NHx2J8xJYshlwoflMObjFk" />
+        <Link Id="W4kbmTTjGC7phwXBCtn9TT" Ids="MBg2VktQka2ojeOBcS4IzA,D1nq51alpeBgjtvIv8m6bP" />
+        <Link Id="P3YOkKBxWPCxwhyCFadvum" Ids="Io56ilkNTDxGxrYossp0My,DyH5rDXpupYFnuZJekhz8m" />
+      </Patch>
+    </Node>
+  </Patch>
+</Document>
