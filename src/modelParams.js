@@ -8,7 +8,7 @@ import { imageState } from "./imageClassification";
 import { segmenterState } from "./imageSegmentation";
 import { imageEmbedderState } from "./imageEmbedder";
 
-import { webcamState, socketState, overlayState, outputState } from './state.js';
+import { webcamState, socketState, overlayState, outputState, setSource } from './state.js';
 
 export const configMap = {
     'Wsaddress': value => socketState.adddress = value,
@@ -24,6 +24,7 @@ export const configMap = {
     },
     'Oheight': value => outputState.height = value,
     'Owidth': value => outputState.width = value,
+    'Source': value => setSource(value),
 
     'Detectfacelandmarks': value => detectSwitch(faceLandmarkState, parseInt(value) === 1),
     'Detectfaces': value => detectSwitch(faceDetectorState, parseInt(value) === 1),

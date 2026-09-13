@@ -23,6 +23,7 @@ import { segmenterState, createImageSegmenter } from "./imageSegmentation.js";
 import { imageEmbedderState, createImageEmbedder } from "./imageEmbedder.js";
 import { webcamState, socketState, overlayState, outputState } from "./state.js";
 import { configMap } from "./modelParams.js";
+import { setupTextureInput, receiveFramePacket } from "./textureInput.js";
 
 const WASM_PATH = "./mediapipe/wasm";
 const video = document.getElementById("webcam");
@@ -39,12 +40,14 @@ const segmentationCanvas = document.getElementById("segmentation");
 
 let allModelState = [faceLandmarkState, faceDetectorState, handState, gestureState, poseState, objectState, imageState, segmenterState, imageEmbedderState];
 let landmarkerModelState = [faceLandmarkState, handState, gestureState, poseState];
+setupTextureInput({ allModelState, landmarkerModelState, video, canvasElement, objectsDiv, facesDiv, segmentationCanvas });
 
 
 (async function setup() {
   handleQueryParams();
   setupWebSocket(socketState.adddress + ":" + socketState.port, socketState);
   webcamState.webcamDevices = await getWebcamDevices();
+  await new Promise(r => setTimeout(r, 1000));
   // if(handState.detect)
     handState.landmarker = await createHandLandmarker(WASM_PATH);
   // if(gestureState.detect)
@@ -186,6 +189,7 @@ async function predictWebcam(allModelState, objectState, webcamState, video) {
 
 function setupWebSocket(socketURL, socketState) {
   socketState.ws = new WebSocket(socketURL);
+  socketState.ws.binaryType = 'arraybuffer'; // texture input: frame packets arrive as binary messages
 
   socketState.ws.addEventListener('open', () => {
     console.log('WebSocket connection opened');
@@ -198,6 +202,10 @@ function setupWebSocket(socketURL, socketState) {
   });
 
   socketState.ws.addEventListener('message', async (event) => {
+    if (typeof event.data !== 'string') {
+      receiveFramePacket(event.data);
+      return;
+    }
     // Process received messages as needed
     if (event.data === 'ping' || event.data === 'pong') return;
 

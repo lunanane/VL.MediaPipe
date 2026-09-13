@@ -40,8 +40,50 @@ export let outputState = {
   height: 720,
 }
 
+// Source = camera (the default: upstream behaviour) or texture (frames arrive over the WebSocket, see
+// textureInput.js, which also sets onChange).
+export let sourceState = {
+  mode: 'camera',
+  onChange: undefined,
+};
+
+export function setSource(value) {
+  const mode = String(value).trim().toLowerCase();
+  if (mode !== 'camera' && mode !== 'texture') {
+    console.error(`Invalid Source: ${value} (expected camera or texture)`);
+    return;
+  }
+  if (mode === sourceState.mode) return;
+  console.log("Source: " + mode);
+  sourceState.mode = mode;
+  if (mode === 'texture') {
+    stopWebcam();
+  }
+  if (sourceState.onChange) sourceState.onChange(mode);
+  if (mode === 'camera' && webcamState.requestedWebcam) {
+    changeWebcam(webcamState.requestedWebcam);
+  }
+}
+
+function stopWebcam() {
+  if (webcamState.webcamRunning) {
+    webcamState.videoElement.srcObject.getTracks().forEach((track) => {
+      track.stop();
+    });
+    webcamState.webcamRunning = false;
+  }
+  if (webcamState.videoElement) webcamState.videoElement.srcObject = null;
+  if (webcamState.webcamLabel) webcamState.requestedWebcam = webcamState.webcamLabel;
+  webcamState.webcamLabel = '';
+}
+
 async function changeWebcam(webcam) {
   console.log("Attempting to change webcam to " + webcam);
+  if (sourceState.mode === 'texture') {
+    // Texture input: keep the camera closed, remember which one to open when Source returns to camera.
+    if (webcam) webcamState.requestedWebcam = webcam;
+    return;
+  }
   var webcamFound = true;
   if (webcam !== webcamState.webcamLabel) {
     webcamFound = false;
@@ -86,6 +128,12 @@ async function changeWebcam(webcam) {
 }
 
 async function startNewWebcam() {
+  if (sourceState.mode === 'texture') {
+    // Source switched to texture while the device list was being read.
+    webcamState.requestedWebcam = webcamState.webcamLabel;
+    webcamState.webcamLabel = '';
+    return;
+  }
   const constraints = {
     video: {
       deviceId: {
@@ -116,6 +164,13 @@ async function startNewWebcam() {
   // Try and start a new one
   try {
     let stream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (sourceState.mode === 'texture') {
+      // Source switched to texture while the camera was opening.
+      stream.getTracks().forEach((track) => track.stop());
+      webcamState.requestedWebcam = webcamState.webcamLabel;
+      webcamState.webcamLabel = '';
+      return;
+    }
     webcamState.videoElement.srcObject = stream;
     stream.getTracks().forEach(function (track) {
       let trackSettings = track.getSettings();
