@@ -4,15 +4,15 @@
 # ASCII only on purpose: Windows PowerShell 5.1 reads BOM-less files in the ANSI code page.
 #
 # Team rules these helpers implement (RENDERPC01, 2026-09):
-#   - Only ONE vvvv.exe / vvvvc.exe at a time across everyone on the machine: hold D:\claude\_vl-dev\vvvv.lock
+#   - Only ONE vvvv.exe / vvvvc.exe at a time across everyone on the machine: hold <dev>\vl\vvvv.lock
 #     (created with CreateNew, polled every 10 s, up to 45 min) around every run, and delete it only after every
-#     process the script started has actually exited.
+#     process the script started has actually exited. <dev> is Get-MpDevRoot below; VL.TrackingDepthPrepass's
+#     scripts use the same lock file.
 #   - Kill only processes this script started, by PID (the vvvv process tree, recorded before killing).
-#   - Dev packages come from --package-repositories D:\claude\_vl-dev (a junction VL.MediaPipe -> this repo)
-#     and NuGet packages go to --nuget-path D:\claude\_vl-dev\nugets, never into the owner's folders.
+#   - Dev packages come from --package-repositories Get-MpDevRepo (as a submodule: the folder holding this repo)
+#     and NuGet packages go to --nuget-path <dev>\vl\nugets, never into the owner's folders.
 
 $script:MpRepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path.TrimEnd('\')
-$script:MpLockPath = 'D:\claude\_vl-dev\vvvv.lock'
 
 function Get-MpRepoRoot { return $script:MpRepoRoot }
 
@@ -21,19 +21,46 @@ function Get-MpVvvvDir {
     return 'C:\Program Files\vvvv\vvvv_gamma_7.4-0008-g793e4b395d-win-x64'
 }
 
+# The checkout this fork is a submodule of (depth-handtracking, with this repo at vvvv\VL.MediaPipe), or $null
+# standalone: a submodule's .git is a file, and the superproject two levels up has a .gitmodules.
+function Get-MpSuperproject {
+    if (-not (Test-Path -LiteralPath (Join-Path $script:MpRepoRoot '.git') -PathType Leaf)) { return $null }
+    $super = Split-Path -Parent (Split-Path -Parent $script:MpRepoRoot)
+    if ($super -and (Test-Path -LiteralPath (Join-Path $super '.gitmodules'))) { return $super }
+    return $null
+}
+
+# The machine-local dev folder (vl\nugets, vl\vvvv.lock, tools\node): the superproject's .dev folder as a
+# submodule, shared with VL.TrackingDepthPrepass's scripts (the same lock file); standalone, .dev in this repo.
+# MP_DEV_ROOT (or TDP_DEV_ROOT) overrides.
+function Get-MpDevRoot {
+    if ($env:MP_DEV_ROOT) { return $env:MP_DEV_ROOT }
+    if ($env:TDP_DEV_ROOT) { return $env:TDP_DEV_ROOT }
+    $super = Get-MpSuperproject
+    if ($super) { return (Join-Path $super '.dev') }
+    return (Join-Path $script:MpRepoRoot '.dev')
+}
+
+$script:MpLockPath = Join-Path (Get-MpDevRoot) 'vl\vvvv.lock'
+
+# The --package-repositories folder, whose subfolders are packages named by their id: as a submodule the folder
+# holding this repo (vvvv\); standalone, a folder of junctions in the dev folder.
 function Get-MpDevRepo {
     if ($env:MP_VL_DEV) { return $env:MP_VL_DEV }
-    return 'D:\claude\_vl-dev'
+    if ((Get-MpSuperproject) -and ((Split-Path -Leaf $script:MpRepoRoot) -eq 'VL.MediaPipe')) {
+        return (Split-Path -Parent $script:MpRepoRoot)
+    }
+    return (Join-Path (Get-MpDevRoot) 'vl\packages')
 }
 
 function Get-MpNugetPath {
     if ($env:MP_NUGET_PATH) { return $env:MP_NUGET_PATH }
-    return (Join-Path (Get-MpDevRepo) 'nugets')
+    return (Join-Path (Get-MpDevRoot) 'vl\nugets')
 }
 
 function Get-MpNode {
     if ($env:MP_NODE) { return $env:MP_NODE }
-    return 'D:\claude\_tools\node\node.exe'
+    return (Join-Path (Get-MpDevRoot) 'tools\node\node.exe')
 }
 
 # Start-Process in Windows PowerShell 5.1 joins -ArgumentList with spaces and does not quote.
@@ -171,9 +198,13 @@ function Invoke-MpNative {
     return [pscustomobject]@{ ExitCode = $p.ExitCode; TimedOut = $false; Id = $p.Id }
 }
 
-# D:\claude\_vl-dev\VL.MediaPipe -> this repo, so --package-repositories D:\claude\_vl-dev finds the package.
+# <package repository>\VL.MediaPipe -> this repo, so --package-repositories finds the package. In the submodule
+# layout this repo already is that folder: nothing to link, the repo path is returned.
 function Initialize-MpDevJunction {
     $devRepo = Get-MpDevRepo
+    if (((Split-Path -Parent $script:MpRepoRoot) -eq $devRepo.TrimEnd('\')) -and ((Split-Path -Leaf $script:MpRepoRoot) -eq 'VL.MediaPipe')) {
+        return $script:MpRepoRoot
+    }
     if (-not (Test-Path -LiteralPath $devRepo)) { New-Item -ItemType Directory -Force -Path $devRepo | Out-Null }
     $link = Join-Path $devRepo 'VL.MediaPipe'
     if (Test-Path -LiteralPath $link) {

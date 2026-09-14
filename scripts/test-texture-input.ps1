@@ -42,7 +42,7 @@ if ($PageSmoke) {
     $smokeDir = Join-Path $root 'results\page-smoke'
     New-Item -ItemType Directory -Force -Path $smokeDir | Out-Null
     $fixture = 'D:\claude\depth-handtracking\tools\hand-tracking\fixtures\hand_rgb_sample.jpg'
-    $python = 'D:\claude\_tools\refvenv-cuda\Scripts\python.exe'
+    $python = Join-Path (Get-MpDevRoot) 'tools\refvenv-cuda\Scripts\python.exe'
     & $python -c "from PIL import Image; im = Image.open(r'$fixture').convert('RGBA'); open(r'$smokeDir\hand_rgb_sample.rgba','wb').write(im.tobytes()); print(im.size[0], im.size[1])" | Tee-Object -Variable size | Out-Null
     $w, $h = ($size -split ' ')
     Invoke-Step 'page smoke (headless Edge, texture mode, ack)' { & $node (Join-Path $root 'scripts\page-smoke.mjs') --web (Join-Path $root 'web') --image "$smokeDir\hand_rgb_sample.rgba" --width $w --height $h --frames 300 --ack 1 --out "$smokeDir\texture-ack.json" 2>&1 | Select-Object -Last 40 | ForEach-Object { "   $_" } | Write-Host }

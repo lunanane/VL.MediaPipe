@@ -259,10 +259,10 @@ So frames are gated on the echoed frame id.
 
 ## W8. How to run
 
-Portable Node is `D:\claude\_tools\node\node.exe`. The reference Python is `D:\claude\_tools\refvenv-cuda\Scripts\python.exe`.
+`<dev>` below is the dev folder `scripts\lib\MpCommon.ps1` resolves (`Get-MpDevRoot`): as a submodule of depth-handtracking (`vvvv\VL.MediaPipe`), that checkout's `.dev\`; standalone, `.dev\` in this repo. Both are gitignored, and `MP_DEV_ROOT` overrides. Until 2026-09-14 these folders were `D:\claude\_tools` and `D:\claude\_vl-dev`. Portable Node is `<dev>\tools\node\node.exe`; the reference Python is `<dev>\tools\refvenv-cuda\Scripts\python.exe`.
 
 ```
-# page: build and tests (in the submodule; npm cache D:\claude\_tools\npm-cache)
+# page: build and tests (in the submodule; npm cache <dev>\tools\npm-cache)
 cd mediapipe-touchdesigner
 npm install --no-package-lock && npm run build
 node --test "test/**/*.test.mjs"
@@ -278,10 +278,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test-texture-input.p
 # regenerate the VL documents (then --check must say "up to date")
 python scripts\vl\patch_mediapipe_vl.py          python scripts\vl\gen_docs.py
 
-# dev nugets (once): VL.CEF 0.8.2, VL.CEF.Stride 0.8.2, VL.IO.WebServer 1.0.1 -> D:\claude\_vl-dev\nugets
+# dev nugets (once): VL.CEF 0.8.2, VL.CEF.Stride 0.8.2, VL.IO.WebServer 1.0.1 -> <dev>\vl\nugets
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\seed-dev-nugets.ps1
 
-# compile gate (team lock, junction D:\claude\_vl-dev\VL.MediaPipe, --nuget-path D:\claude\_vl-dev\nugets)
+# compile gate (team lock; --package-repositories = the folder holding this repo as a submodule, --nuget-path <dev>\vl\nugets)
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\vvvvc-gate.ps1 [-Documents a.vl,b.vl] [-Verbosity Debug]
 
 # headless harness (team lock; copies the fixture to results\texture-harness\)
@@ -289,7 +289,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-texture-harness.
 ```
 
 Both vvvv scripts share `scripts\lib\MpCommon.ps1`:
-- They take `D:\claude\_vl-dev\vvvv.lock` with CreateNew, polled every 10 s for up to 45 min.
+- They take `<dev>\vl\vvvv.lock` (the file VL.TrackingDepthPrepass's scripts use too) with CreateNew, polled every 10 s for up to 45 min.
 - They kill only the process tree they started, by PID.
 - They wait until every process of that tree has exited (CEF helpers included) before deleting the lock.
 
