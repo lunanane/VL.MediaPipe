@@ -149,8 +149,29 @@
             <Pin Id="NNI8EZbsFqJdCoUmZE3bKU" Name="Input" Kind="InputPin" />
             <Pin Id="CROxbu1qtLrcdFZaC6s82F" Name="Max Number of Hands" Kind="InputPin" DefaultValue="1" />
             <Pin Id="CbMtpYZa56XheN7oiVSMqB" Name="Landmarks" Kind="OutputPin" />
+            <Pin Id="BwXzFp2Mw8CnNYMlu6cO4y" Name="Frame Tag" Kind="OutputPin" />
           </Node>
           <Pad Id="TD8mrF6InOgDUetuejkr0B" Comment="Landmarks" Bounds="62,430,300,120" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="NgFY5gAeEUQ9cEHCFxMHv2" Comment="Frame Tag" Bounds="162,560,60,15" ShowValueBox="true" isIOBox="true" />
+          <Node Bounds="60,610,60,26" Id="TSkeFfZF39S2QlxXVzAn9R">
+            <p:NodeReference LastCategoryFullName="MediaPipe.MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="OperationCallFlag" Name="GetHands" />
+            </p:NodeReference>
+            <Pin Id="ZTggUEhYli9r2jkkg0m3ax" Name="Input" Kind="StateInputPin" />
+            <Pin Id="ZcviSEoI7kFzIn1XHjchyY" Name="Output" Kind="StateOutputPin" />
+            <Pin Id="H3zU1dEqVtEeXtkfW1BKtF" Name="Value" Kind="OutputPin" />
+          </Node>
+          <Pad Id="XRa2qsLRHRZYVehoA2sEmZ" Comment="Hand Results" Bounds="62,660,280,60" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="JQyHlSPdS7VQmddvkIpSxZ" Bounds="62,735,300,70" ShowValueBox="true" isIOBox="true" Value="HandDetector's Frame Tag: the Input Frame Tag of the frame its landmarks were detected on (-1 before the first results). GetHands gives the hand results object itself: per hand 21 landmarks normalized to the texture, handedness and score, and its Frame Tag, e.g. for a node that pairs hands with the camera frame they came from.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
           <Node Bounds="260,380,125,19" Id="MdXH1JS2jkS936URvMlxOA">
             <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
               <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
@@ -200,6 +221,9 @@
         <Link Id="NWYFWpeL921d8SKx0IwRdX" Ids="DSiDamBK8VRDCvrLhyq1Qn,NNI8EZbsFqJdCoUmZE3bKU" />
         <Link Id="Db9Go0usa1jsbHyMRc5Z9R" Ids="DSiDamBK8VRDCvrLhyq1Qn,ZGqSF2SIliyohc1DU8Pmkk" />
         <Link Id="Fh0seFb7o3eZMRiv2O5i1V" Ids="CbMtpYZa56XheN7oiVSMqB,TD8mrF6InOgDUetuejkr0B" />
+        <Link Id="LBJKCmrD9YiT4bZvl0dPiv" Ids="BwXzFp2Mw8CnNYMlu6cO4y,NgFY5gAeEUQ9cEHCFxMHv2" />
+        <Link Id="QJriDX10KsXQG3wJCZOEJF" Ids="DSiDamBK8VRDCvrLhyq1Qn,ZTggUEhYli9r2jkkg0m3ax" />
+        <Link Id="PJsMyO9f0RXfezADr77MzA" Ids="H3zU1dEqVtEeXtkfW1BKtF,XRa2qsLRHRZYVehoA2sEmZ" />
         <Link Id="XGKHDSQ5pQ3OcTJOMa06oz" Ids="FnJn47JO31WrBvFkYiwRFO,T5qzIVdACzs87UFINl6cNS" />
         <Link Id="LDrKDb6xLQ5QYDs6MYmNUj" Ids="CCkMsP0qVShKD4dXPDBIjV,BKv6AgEKqsPu5FlIrGAutE" />
         <Link Id="UDpjNwnmtGFZP7J4Dyj4Sw" Ids="KV6TojjSRgcXIxH5qYg8cU,O8G6QDdUuo7WV9EnBZKBhR" />

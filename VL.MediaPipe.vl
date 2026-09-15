@@ -8,7 +8,7 @@
     ************************ MediaPipe ************************
 
 -->
-      <Node Name="MediaPipe" Aspects="Internal" Bounds="150,238" Id="Q5HejFxEzF3O35hE7Mpbcl">
+      <Node Name="MediaPipe" Bounds="150,238" Id="Q5HejFxEzF3O35hE7Mpbcl">
         <p:NodeReference>
           <Choice Kind="ClassDefinition" Name="Class" />
           <CategoryReference Kind="Category" Name="Primitive" />
@@ -2250,7 +2250,7 @@
           <Link Id="M6dBhykeuLSOMyd6HWszmb" Ids="Tju1AguKLhLM0LLRgnHngH,RcgWFZIwfXTMczNWetj7KZ" />
           <Link Id="O4msmhBOsv7PufMS5ct0QU" Ids="RE41jhHdFCNOdIY6N7reVc,LqvwxGjaiHrNzYYaBHfiAc" />
           <Link Id="MOcLVmgLws9PCQR2kDuJUy" Ids="RRrflHzG8KOLeENDZggRCA,SH39ngwUjZKLtBk4ifbpRr" />
-          <Patch Id="R6Y9nI8otstLlKGSyiASW7" Name="GetHands (Internal)">
+          <Patch Id="R6Y9nI8otstLlKGSyiASW7" Name="GetHands">
             <Pin Id="Jn8AbLVDzYZLwLa2XMvpFG" Name="Value" Kind="OutputPin" />
           </Patch>
           <Link Id="MmuAqRGJVe3P4UGxMTh54F" Ids="PPfyqZe3hFEMwD8k66DDhL,Jn8AbLVDzYZLwLa2XMvpFG" IsHidden="true" />
@@ -4012,7 +4012,7 @@
         <Patch Id="H53D4TEVHWjNAgGRmk3RLD">
           <Canvas Id="I0ZDi5q3mxRMnPEVvIlfP3" CanvasType="Group">
             <ControlPoint Id="AHMO3O3QCBOQBpcHWgmj1Y" Bounds="203,167" />
-            <Node Bounds="192,238,580,253" Id="KfJeXH6k9EDL834Hvieacg">
+            <Node Bounds="192,238,440,253" Id="KfJeXH6k9EDL834Hvieacg">
               <p:NodeReference LastCategoryFullName="Primitive" LastDependency="Builtin">
                 <Choice Kind="StatefulRegion" Name="Region (Stateful)" Fixed="true" />
                 <CategoryReference Kind="Category" Name="Primitive" />
@@ -4025,12 +4025,8 @@
               <ControlPoint Id="RllqNIbGcZNMxfWTDC9iYu" Bounds="431,244" Alignment="Top" />
               <ControlPoint Id="QVfeJv9HdgXL0Mn5dI0Awl" Bounds="468,485" Alignment="Bottom" />
               <ControlPoint Id="EMNdDDY0R66MlTugHt3VIm" Bounds="551,244" Alignment="Top" />
-              <ControlPoint Id="WT1czz4mlhvYiSqUGMmGEi" Bounds="590,485" Alignment="Bottom" />
-              <ControlPoint Id="S5xbD6Y2loj4ghqBRiatkm" Bounds="610,244" Alignment="Top" />
-              <ControlPoint Id="R5XojAshYVG2qrQwamcp2W" Bounds="650,485" Alignment="Bottom" />
-              <ControlPoint Id="SbUXyyntTezM10RnxqmwhM" Bounds="670,244" Alignment="Top" />
-              <ControlPoint Id="NGWzgPp6DPTIu1mvlB0JSg" Bounds="710,485" Alignment="Bottom" />
-              <ControlPoint Id="EdeeZJEPfjUpCTAfGYM0Rj" Bounds="730,244" Alignment="Top" />
+              <ControlPoint Id="KeeANpeqia1qurtrOd0s6V" Bounds="590,485" Alignment="Bottom" />
+              <ControlPoint Id="WNvrREYbnT7FEzhuTA8RQi" Bounds="610,244" Alignment="Top" />
               <Patch Id="AWXeKDwU3MHNfF7ty5NDYB" ManuallySortedPins="true">
                 <Patch Id="CnXwbX0HKuZOxNFuUw9uUa" Name="Create" ManuallySortedPins="true" />
                 <Patch Id="KVbiZ7K1HiVPA2uiJhgdDc" Name="Then" ManuallySortedPins="true" />
@@ -4043,7 +4039,7 @@
                   <Pin Id="MMvT8TpgwkmL6dHAHeCxjX" Name="Output" Kind="StateOutputPin" />
                   <Pin Id="Da1bwDv141sPLRhqiWJ7oB" Name="Value" Kind="OutputPin" />
                 </Node>
-                <Node Bounds="250,331,510,86" Id="USXBRbjheeGOmxCeQ5Q101">
+                <Node Bounds="250,331,317,86" Id="USXBRbjheeGOmxCeQ5Q101">
                   <p:NodeReference LastCategoryFullName="Control" LastDependency="VL.CoreLib.vl">
                     <Choice Kind="StatefulRegion" Name="Region (Stateful)" Fixed="true" />
                     <CategoryReference Kind="Category" Name="Control" />
@@ -4060,9 +4056,6 @@
                   <ControlPoint Id="FM2clROAXYaMDEJJloxDCK" Bounds="265,411" Alignment="Bottom" />
                   <ControlPoint Id="CAbK3kIGSWjMhmX0UWuQVG" Bounds="370,411" Alignment="Bottom" />
                   <ControlPoint Id="FFj96acS77kLWXmr2YPXMr" Bounds="475,411" Alignment="Bottom" />
-                  <ControlPoint Id="AjAbyuMMRiNzxCeD2OWUmd" Bounds="590,411" Alignment="Bottom" />
-                  <ControlPoint Id="UqoVIo1A7KkMD0EfTon8I9" Bounds="650,411" Alignment="Bottom" />
-                  <ControlPoint Id="GRbrf2OAbn030KY4OeN89r" Bounds="710,411" Alignment="Bottom" />
                   <Patch Id="JwDONH864lpLfQxnwMJ6ES" ManuallySortedPins="true">
                     <Patch Id="RnljGCKVrULNVQMa1uOKsq" Name="Create" ManuallySortedPins="true" />
                     <Patch Id="Kgi567W7uF3Notlg3RbcyR" Name="Update" ManuallySortedPins="true" />
@@ -4093,16 +4086,6 @@
                       <Pin Id="RxS7dOldIoMQbAonl9M8Ig" Name="Output" Kind="OutputPin" />
                       <Pin Id="DHqj5xpsFBnLT0do9cJfal" Name="Source Frame Rate" Kind="OutputPin" />
                     </Node>
-                    <Node Bounds="585,370,80,26" Id="DvbYoen3SxKiE3jK7GiUUx">
-                      <p:NodeReference LastCategoryFullName="VL.MediaPipe.TimerResult.Timers" LastDependency="VL.MediaPipe.dll">
-                        <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
-                        <Choice Kind="OperationCallFlag" Name="GetFrameInfo" />
-                      </p:NodeReference>
-                      <Pin Id="HDOM7YiejmN0ZQLja2QGhD" Name="Input" Kind="StateInputPin" />
-                      <Pin Id="AYWY0dp3e8EwokqIg6wbNy" Name="Frame Id" Kind="OutputPin" />
-                      <Pin Id="BxsIPQ0kSNQGAKOGNlH237" Name="Frame Latency" Kind="OutputPin" />
-                      <Pin Id="AeLAmZ0D7TuN9wQ3Yuq8zf" Name="Frame Tag" Kind="OutputPin" />
-                    </Node>
                     <Patch Id="H9UuX7hmT84OUksMedEdUh" Name="Dispose" />
                   </Patch>
                   <Pin Id="Sz1LAf4QPm0QAbDYck95xk" Name="Warn" Kind="InputPin" />
@@ -4121,9 +4104,19 @@
             <ControlPoint Id="HwBoiD8JSJ8MHpMTN4Sohg" Bounds="271,526" />
             <ControlPoint Id="OrFg7FhMehEM7Prb5Fm74D" Bounds="369,528" />
             <ControlPoint Id="FqPlIL7brwBP6nA0IFxJVq" Bounds="469,525" />
-            <ControlPoint Id="Pcr52gGnXzu9sBcHgorbL3" Bounds="590,525" />
-            <ControlPoint Id="UaWPcamvjTbcyKV86SKVZp" Bounds="650,525" />
-            <ControlPoint Id="ScCCkGlnngYcIZhYkDWeP2" Bounds="710,525" />
+            <Node Bounds="585,500,105,19" Id="HxjM4VS48XUhy86A9NqT9u">
+              <p:NodeReference LastCategoryFullName="VL.MediaPipe.TimerResult.Timers" LastDependency="VL.MediaPipe.dll">
+                <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                <Choice Kind="OperationCallFlag" Name="FrameInfoOf" />
+              </p:NodeReference>
+              <Pin Id="ReFyCXfEvtaAXjQMJwCLfO" Name="Timers" Kind="InputPin" />
+              <Pin Id="KO9t1zq0pQelBh1qj9FLg2" Name="Frame Id" Kind="OutputPin" />
+              <Pin Id="SE4vfedspwNdry58SrUiZm" Name="Frame Latency" Kind="OutputPin" />
+              <Pin Id="IMqWh3HtHd3ANuBfxdfnuE" Name="Frame Tag" Kind="OutputPin" />
+            </Node>
+            <ControlPoint Id="Pcr52gGnXzu9sBcHgorbL3" Bounds="590,545" />
+            <ControlPoint Id="UaWPcamvjTbcyKV86SKVZp" Bounds="650,545" />
+            <ControlPoint Id="ScCCkGlnngYcIZhYkDWeP2" Bounds="710,545" />
           </Canvas>
           <ProcessDefinition Id="R2TNrnHGWFgNFe0bRKrtcK">
             <Fragment Id="H1h0GRMR5X3NclufI9QC02" Patch="C2gw2wmr19hLukd9hIlWjb" Enabled="true" />
@@ -4159,17 +4152,17 @@
                 <Choice Kind="TypeFlag" Name="Integer32" />
               </p:TypeAnnotation>
             </Pin>
-            <Pin Id="RcBHQyNbYFwWnjdcf30d1t" Name="Frame Id" Kind="OutputPin" Bounds="706,657" Summary="Source = Texture: the frame these timings belong to. -1 for camera input.">
+            <Pin Id="RcBHQyNbYFwWnjdcf30d1t" Name="Frame Id" Kind="OutputPin" Bounds="706,657" Summary="Source = Texture: the frame these timings belong to. -1 for camera input and before the first timings.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Integer32" />
               </p:TypeAnnotation>
             </Pin>
-            <Pin Id="CAaqgqt7VJYbool7GCjdcF" Name="Frame Latency (ms)" Kind="OutputPin" Bounds="806,657" Summary="Source = Texture: milliseconds from sending the frame to receiving its timings, on the vvvv clock. Includes Detection Time; excludes the texture readback before sending. -1 for camera input.">
+            <Pin Id="CAaqgqt7VJYbool7GCjdcF" Name="Frame Latency (ms)" Kind="OutputPin" Bounds="806,657" Summary="Source = Texture: milliseconds from sending the frame to receiving its timings, on the vvvv clock. Includes Detection Time; excludes the texture readback before sending. -1 for camera input and before the first timings.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Float32" />
               </p:TypeAnnotation>
             </Pin>
-            <Pin Id="DlO41dMnfPBodHzctsizHd" Name="Frame Tag" Kind="OutputPin" Bounds="906,657" Summary="Source = Texture: the MediaPipe node's Input Frame Tag of the frame these timings belong to, e.g. its camera frame id. -1 for camera input or without a tag.">
+            <Pin Id="DlO41dMnfPBodHzctsizHd" Name="Frame Tag" Kind="OutputPin" Bounds="906,657" Summary="Source = Texture: the MediaPipe node's Input Frame Tag of the frame these timings belong to, e.g. its camera frame id. -1 for camera input, without a tag, and before the first timings.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Integer32" />
               </p:TypeAnnotation>
@@ -4185,21 +4178,14 @@
           <Link Id="AicaGrAZVjlL0QZxJouzIW" Ids="CAbK3kIGSWjMhmX0UWuQVG,ECJStnO6fNxQUfikMDkld8" />
           <Link Id="SUfTmDB0PYpMGcAY1keJbx" Ids="DHqj5xpsFBnLT0do9cJfal,FFj96acS77kLWXmr2YPXMr" />
           <Link Id="QdEpuHGCGDDPp2ZTkCEt7k" Ids="FFj96acS77kLWXmr2YPXMr,QVfeJv9HdgXL0Mn5dI0Awl" />
-          <Link Id="MbZNB3D9MGtVTJlg6qceyS" Ids="Da1bwDv141sPLRhqiWJ7oB,HDOM7YiejmN0ZQLja2QGhD" />
-          <Link Id="Q2B17SQAj69GrzP3Fk4yU7" Ids="AYWY0dp3e8EwokqIg6wbNy,AjAbyuMMRiNzxCeD2OWUmd" />
-          <Link Id="XzrWno9HXSiOAbJ7c0Ms9A" Ids="AjAbyuMMRiNzxCeD2OWUmd,WT1czz4mlhvYiSqUGMmGEi" />
-          <Link Id="DfpZsarqoczq3FpEMa5isd" Ids="S5xbD6Y2loj4ghqBRiatkm,WT1czz4mlhvYiSqUGMmGEi" IsFeedback="true" />
-          <Link Id="GcO7IoM1lIjdqbWlWEtgym" Ids="WT1czz4mlhvYiSqUGMmGEi,Pcr52gGnXzu9sBcHgorbL3" />
+          <Link Id="ZJkvYuo63hlfDcr0mUpA0M" Ids="Da1bwDv141sPLRhqiWJ7oB,KeeANpeqia1qurtrOd0s6V" />
+          <Link Id="FOuJWTW0vGVVWS0f9b1f7k" Ids="WNvrREYbnT7FEzhuTA8RQi,KeeANpeqia1qurtrOd0s6V" IsFeedback="true" />
+          <Link Id="XOTwdz9m9exTCZxyJejhQC" Ids="KeeANpeqia1qurtrOd0s6V,ReFyCXfEvtaAXjQMJwCLfO" />
+          <Link Id="GcO7IoM1lIjdqbWlWEtgym" Ids="KO9t1zq0pQelBh1qj9FLg2,Pcr52gGnXzu9sBcHgorbL3" />
           <Link Id="EC73JCgj9ArOJvJq43DDRu" Ids="Pcr52gGnXzu9sBcHgorbL3,RcBHQyNbYFwWnjdcf30d1t" IsHidden="true" />
-          <Link Id="BLakF7I9ScF5JNuWwMZgtu" Ids="BxsIPQ0kSNQGAKOGNlH237,UqoVIo1A7KkMD0EfTon8I9" />
-          <Link Id="FqRPnY5ObSNGVPHzZujVwc" Ids="UqoVIo1A7KkMD0EfTon8I9,R5XojAshYVG2qrQwamcp2W" />
-          <Link Id="Ok490ZK9KS4jemsHGDA0dU" Ids="SbUXyyntTezM10RnxqmwhM,R5XojAshYVG2qrQwamcp2W" IsFeedback="true" />
-          <Link Id="COZk0fxFhQiiJJyZBvks4x" Ids="R5XojAshYVG2qrQwamcp2W,UaWPcamvjTbcyKV86SKVZp" />
+          <Link Id="COZk0fxFhQiiJJyZBvks4x" Ids="SE4vfedspwNdry58SrUiZm,UaWPcamvjTbcyKV86SKVZp" />
           <Link Id="DdmUjgcDcncuipORFRFskg" Ids="UaWPcamvjTbcyKV86SKVZp,CAaqgqt7VJYbool7GCjdcF" IsHidden="true" />
-          <Link Id="THxUL1WoEpKfS5gzmwIwf8" Ids="AeLAmZ0D7TuN9wQ3Yuq8zf,GRbrf2OAbn030KY4OeN89r" />
-          <Link Id="FvFb3s2dy1v5QsQUqMXXZm" Ids="GRbrf2OAbn030KY4OeN89r,NGWzgPp6DPTIu1mvlB0JSg" />
-          <Link Id="WNnaQ2FP7xTha576dF5nsS" Ids="EdeeZJEPfjUpCTAfGYM0Rj,NGWzgPp6DPTIu1mvlB0JSg" IsFeedback="true" />
-          <Link Id="XoQQ7ohPBVvwycRSTng76V" Ids="NGWzgPp6DPTIu1mvlB0JSg,ScCCkGlnngYcIZhYkDWeP2" />
+          <Link Id="XoQQ7ohPBVvwycRSTng76V" Ids="IMqWh3HtHd3ANuBfxdfnuE,ScCCkGlnngYcIZhYkDWeP2" />
           <Link Id="DSwGXTK467VaqJ9jvooGtC" Ids="ScCCkGlnngYcIZhYkDWeP2,DlO41dMnfPBodHzctsizHd" IsHidden="true" />
         </Patch>
       </Node>
@@ -4962,6 +4948,8 @@
               </Patch>
               <ControlPoint Id="KwO6PqvMfXrLcj1BgLHV3H" Bounds="185,789" Alignment="Bottom" />
               <ControlPoint Id="AE21COVXsXzOIG34pCPnk5" Bounds="241,218" Alignment="Top" />
+              <ControlPoint Id="IwZEiajwLYxq4nJtJgvu1k" Bounds="420,789" Alignment="Bottom" />
+              <ControlPoint Id="ZEISxO2nNpbdsepG2Xakv3" Bounds="420,218" Alignment="Top" />
             </Node>
             <Node Bounds="156,173,65,19" Id="CX6XcJvwfxgNtHqWWqaZhL">
               <p:NodeReference LastCategoryFullName="Primitive.Object" LastDependency="VL.CoreLib.vl">
@@ -4978,6 +4966,15 @@
             <ControlPoint Id="G27ZOXQcrJoMd8vllNz58x" Bounds="547,528" />
             <ControlPoint Id="ABv6ggbdrDdLkSqd47iZYc" Bounds="249,819" />
             <ControlPoint Id="TJjUBp4qIcQOrTl9taSiZU" Bounds="330,819" />
+            <Node Bounds="415,810,85,19" Id="WryIfbGvAGrq9AYxtl86Eh">
+              <p:NodeReference LastCategoryFullName="MediaPipe.HandResults.Handresults" LastDependency="VL.MediaPipe.dll">
+                <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                <Choice Kind="OperationCallFlag" Name="FrameTagOf" />
+              </p:NodeReference>
+              <Pin Id="GiyNgltz1F9becATjj5W2g" Name="Hand Results" Kind="InputPin" />
+              <Pin Id="FLQj6BdCTB9Xv1k4aWjxB2" Name="Frame Tag" Kind="OutputPin" />
+            </Node>
+            <ControlPoint Id="J8OXESPvcqmdK5XoGJP53m" Bounds="420,850" />
             <!--
 
     ************************ Landmark ************************
@@ -5491,6 +5488,11 @@
             </Pin>
             <Pin Id="Vq33oNl4q2iLDQPpUp8tYt" Name="Landmarks" Kind="OutputPin" Bounds="342,792" />
             <Pin Id="E2HQCAWRudwNYXiZzgUR0k" Name="World Landmarks" Kind="OutputPin" Bounds="304,751" />
+            <Pin Id="XUVyH7vW7nSNorCbzQ4sJp" Name="Frame Tag" Kind="OutputPin" Bounds="420,870" Summary="Source = Texture: the MediaPipe node's Input Frame Tag of the frame the current hand results were detected on, e.g. its camera frame id. -1 for camera input, without a tag, and before the first results.">
+              <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+                <Choice Kind="TypeFlag" Name="Integer32" />
+              </p:TypeAnnotation>
+            </Pin>
             <Pin Id="IPIgllm3av2QZbS1FBIUow" Name="Output" Kind="OutputPin" Bounds="241,862" />
           </Patch>
           <Link Id="RmChJ9ogJzrMS6IwCZHY3n" Ids="KIbYE9UK9c6NAN8GQxxNjJ,T8suMYbu5IvNLGRY10jtmF" />
@@ -5517,6 +5519,11 @@
           <Link Id="DdxbfOZ8GYxLyq1RBW1t6Y" Ids="BeSGKja07qQLaihaRAEqTU,IPIgllm3av2QZbS1FBIUow" IsHidden="true" />
           <Link Id="EUcNnTmqFmNMJ10otjOUpX" Ids="H5gwryZpS2oMGSKg2hL7J2,S3qeJl6Ue2VOmMAn8INqyp" />
           <Link Id="Cmt1vJRwogyLGjU5QE0SS5" Ids="G2Ns2phzDJ8Qa4a1EmlGmh,RZLSdyvBABkLzfgLI5jw9P" />
+          <Link Id="EugZnHPiocdwjq8cBUNkQe" Ids="G2Ns2phzDJ8Qa4a1EmlGmh,IwZEiajwLYxq4nJtJgvu1k" />
+          <Link Id="OUZIdCKxCozPAxW7QBFm1s" Ids="ZEISxO2nNpbdsepG2Xakv3,IwZEiajwLYxq4nJtJgvu1k" IsFeedback="true" />
+          <Link Id="Y8fcrbiDGIZYXmetzzq4aj" Ids="IwZEiajwLYxq4nJtJgvu1k,GiyNgltz1F9becATjj5W2g" />
+          <Link Id="H0czYPe2LwgJsb88X2zV2h" Ids="FLQj6BdCTB9Xv1k4aWjxB2,J8OXESPvcqmdK5XoGJP53m" />
+          <Link Id="KPQMA00rsISv04wYOFq1GU" Ids="J8OXESPvcqmdK5XoGJP53m,XUVyH7vW7nSNorCbzQ4sJp" IsHidden="true" />
         </Patch>
       </Node>
       <!--

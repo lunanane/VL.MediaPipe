@@ -37,6 +37,9 @@ namespace MediaPipe.HandResults
 
         void IJsonOnDeserialized.OnDeserialized() =>
             FrameTag = global::MediaPipe.FrameMetadata.Received("handResults", FrameId, Landmarks?.Length ?? 0);
+
+        /// <summary>HandDetector's Frame Tag: the Frame Tag of these hand results, -1 before the first results arrive.</summary>
+        public static void FrameTagOf(Handresults? handResults, out int frameTag) => frameTag = handResults?.FrameTag ?? -1;
     }
 }
 
@@ -195,6 +198,22 @@ namespace VL.MediaPipe.TimerResult
             frameId = FrameId is long id ? unchecked((int)id) : -1;
             frameLatency = SourceTimestamp is double sent ? (float)(ReceivedTime - sent) : -1f;
             frameTag = FrameTag;
+        }
+
+        /// <summary>
+        /// Timings' frame outputs: GetFrameInfo of <paramref name="timers"/>, or -1 / -1 / -1 before the first timers
+        /// message (no timers yet), so a patch never reads a frame tag 0 that no frame carried.
+        /// </summary>
+        public static void FrameInfoOf(Timers? timers, out int frameId, out float frameLatency, out int frameTag)
+        {
+            if (timers is null)
+            {
+                frameId = -1;
+                frameLatency = -1f;
+                frameTag = -1;
+                return;
+            }
+            timers.GetFrameInfo(out frameId, out frameLatency, out frameTag);
         }
     }
 }

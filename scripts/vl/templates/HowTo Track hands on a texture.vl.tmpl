@@ -149,8 +149,29 @@
             <Pin Id="@ID(hd-input)" Name="Input" Kind="InputPin" />
             <Pin Id="@ID(hd-max)" Name="Max Number of Hands" Kind="InputPin" DefaultValue="1" />
             <Pin Id="@ID(hd-landmarks)" Name="Landmarks" Kind="OutputPin" />
+            <Pin Id="@ID(hd-frametag)" Name="Frame Tag" Kind="OutputPin" />
           </Node>
           <Pad Id="@ID(pad-landmarks)" Comment="Landmarks" Bounds="62,430,300,120" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="@ID(pad-hd-frametag)" Comment="Frame Tag" Bounds="162,560,60,15" ShowValueBox="true" isIOBox="true" />
+          <Node Bounds="60,610,60,26" Id="@ID(n-gethands)">
+            <p:NodeReference LastCategoryFullName="MediaPipe.MediaPipe" LastDependency="VL.MediaPipe.vl">
+              <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+              <Choice Kind="OperationCallFlag" Name="GetHands" />
+            </p:NodeReference>
+            <Pin Id="@ID(gh-input)" Name="Input" Kind="StateInputPin" />
+            <Pin Id="@ID(gh-output)" Name="Output" Kind="StateOutputPin" />
+            <Pin Id="@ID(gh-value)" Name="Value" Kind="OutputPin" />
+          </Node>
+          <Pad Id="@ID(pad-handresults)" Comment="Hand Results" Bounds="62,660,280,60" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="@ID(pad-hands-note)" Bounds="62,735,300,70" ShowValueBox="true" isIOBox="true" Value="HandDetector's Frame Tag: the Input Frame Tag of the frame its landmarks were detected on (-1 before the first results). GetHands gives the hand results object itself: per hand 21 landmarks normalized to the texture, handedness and score, and its Frame Tag, e.g. for a node that pairs hands with the camera frame they came from.">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="String" />
+            </p:TypeAnnotation>
+            <p:ValueBoxSettings>
+              <p:fontsize p:Type="Int32">9</p:fontsize>
+              <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
+            </p:ValueBoxSettings>
+          </Pad>
           <Node Bounds="260,380,125,19" Id="@ID(n-timings)">
             <p:NodeReference LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.vl">
               <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
@@ -200,6 +221,9 @@
         <Link Id="@ID(l-state-hands)" Ids="@ID(mp-stateout),@ID(hd-input)" />
         <Link Id="@ID(l-state-timings)" Ids="@ID(mp-stateout),@ID(tm-input)" />
         <Link Id="@ID(l-landmarks)" Ids="@ID(hd-landmarks),@ID(pad-landmarks)" />
+        <Link Id="@ID(l-hd-frametag)" Ids="@ID(hd-frametag),@ID(pad-hd-frametag)" />
+        <Link Id="@ID(l-state-gethands)" Ids="@ID(mp-stateout),@ID(gh-input)" />
+        <Link Id="@ID(l-handresults)" Ids="@ID(gh-value),@ID(pad-handresults)" />
         <Link Id="@ID(l-detect)" Ids="@ID(tm-detect),@ID(pad-detect)" />
         <Link Id="@ID(l-rate)" Ids="@ID(tm-rate),@ID(pad-rate)" />
         <Link Id="@ID(l-frameid)" Ids="@ID(tm-frameid),@ID(pad-frameid)" />

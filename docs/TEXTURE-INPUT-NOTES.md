@@ -338,6 +338,34 @@ frame number as tag: hands only on hand frames) and `ClockProbe.vl` on the Femto
 Under Node 20.15 the timing-sensitive page test "frame pump: detection never overlaps" fails; the page code is unchanged
 by this work (the portable Node 24 the notes use is not installed on this PC).
 
+## W10. Hand results for other documents (2026-09-15, branch `feat/camera-frame-id`)
+
+**Why.** VL.HandTracking's `MediaPipeHandSource` (a C# node in another document) needs the hand results object with its
+Frame Tag. From another document vvvvc reported `Not found: GetHands`: the operation was named `GetHands (Internal)`
+and, independently, the `MediaPipe` class carries `Aspects="Internal"`, which hides every operation of the class from
+other documents whatever its name. Only Timings' Frame Tag was reachable, and it read 0 until the first timers message.
+
+**What changed (generated, `scripts/vl/patch_mediapipe_vl.py`; existing pins unchanged).**
+- `MediaPipe.GetHands` is public: `Aspects="Internal"` is dropped from the class and the operation loses its
+  `(Internal)` suffix. The other `Get*` operations keep their suffix and stay internal; Create/Update are the process
+  node's own. Value = `MediaPipe.HandResults.Handresults`: per hand `Landmarks` (21, `Position` normalized to the input
+  texture), `Handedness` (categories: `CategoryName`, `Score`) and `FrameTag` (-1 untagged).
+- `HandDetector` gains **Frame Tag** (Integer32, after World Landmarks), answering Q6 for hands (the other detectors
+  still have none): GetHands' value leaves the outer If region through a feedback border into the new static
+  `Handresults.FrameTagOf(Handresults, out frameTag)`, which gives -1 before the first results.
+- `Timings`' Frame Id, Frame Latency (ms) and Frame Tag are -1 before the first timers message: GetTimers' value leaves
+  the If region through a feedback border into the new static `Timers.FrameInfoOf(Timers, out frameId, out frameLatency,
+  out frameTag)` on the canvas. Before, `GetFrameInfo` sat inside the Try region, which fails on the null timers and
+  yields the type default 0, a valid frame tag.
+- `help/HowTo Track hands on a texture.vl`: HandDetector Frame Tag and a GetHands node with its Value.
+
+**Checks.** FramePacketCheck: FrameInfoOf / FrameTagOf with and without results (53 checks). vvvv gamma 7.2-0014 with the
+liminal-room nugets (`MP_VVVV_DIR`, `MP_NUGET_PATH` = `.dev\vl\nugets-liminal-7.2`): `scripts\vvvvc-gate.ps1` exit 0
+for the help patch and the harness, no dependency-error line; `VL.MediaPipe.vl` itself still stops with "Entry point for
+document VL.MediaPipe.vl not found" (a package document has no Application; identical in the 2026-09-14 gate before this
+change). `tools/vvvv-node/compat/MediaPipeHandSourceSmoke.vl` (DocumentDependency on this document) compiles and runs:
+GetHands' value into MediaPipeHandSource publishes the Kinect v2 frame's hand with the frame tag fed to Input Frame Tag.
+
 ---
 
 # Wave 1 record: M0 groundwork notes (2026-09-13)

@@ -114,6 +114,12 @@ Check(emptyHands.HandResults.FrameTag == -1, "handResults JSON: an untagged pack
 Check(trace.Messages.Any(m => m == ("timers", tagged, 1234, -1)), "FrameTrace: OnMessage reports timers with id and tag");
 Check(trace.Messages.Any(m => m == ("handResults", tagged, 1234, 2)), "FrameTrace: OnMessage reports handResults with its hand count");
 Check(trace.Messages.Any(m => m == ("handResults", untagged, -1, 0)), "FrameTrace: empty handResults are reported too (0 hands)");
+Timers.FrameInfoOf(taggedTimers, out var ofId, out _, out var ofTag);
+Timers.FrameInfoOf(null, out var noId, out var noLatency, out var noTag);
+Check(ofId == tagged && ofTag == 1234 && noId == -1 && noLatency == -1f && noTag == -1, "FrameInfoOf: GetFrameInfo of the timers; -1 / -1 / -1 before any timers (Timings at start-up)");
+Handresults.FrameTagOf(echoedHands.HandResults, out var handTag);
+Handresults.FrameTagOf(null, out var noHandTag);
+Check(handTag == 1234 && noHandTag == -1, "FrameTagOf: the hand results' Frame Tag; -1 before any results (HandDetector at start-up)");
 var cameraHands = JsonSerializer.Deserialize<HandRoot>("{\"handResults\":{\"landmarks\":[]}}", options)!;
 Check(cameraHands.HandResults.FrameTag == -1 && trace.Messages.Count == 3, "camera-mode results (no frame id): FrameTag -1, not traced");
 FrameTrace.Listener = new ThrowingListener();

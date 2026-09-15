@@ -1,4 +1,4 @@
-"""Applies the texture-input changes to VL.MediaPipe.vl.
+"""Applies the texture-input changes to VL.MediaPipe.vl (plus frame tags: public GetHands, HandDetector / Timings Frame Tag).
 
 Starts from the upstream document in git (default: bd17c52, the fork point before any texture-input edit of the
 .vl), inserts XML snippets at anchors that must each match exactly once, and writes VL.MediaPipe.vl with CRLF line
@@ -286,50 +286,40 @@ CEF_UPSTREAM = '<NugetDependency Id="G3a6CNjID7kOWzilC83hEQ" Location="VL.CEF" V
 CEF_LIMINAL = '<NugetDependency Id="G3a6CNjID7kOWzilC83hEQ" Location="VL.CEF" Version="0.7.2" />'
 
 # ---------------------------------------------------------------------------------------------------------------
-# Timings: Frame Id, Frame Latency (ms) and Frame Tag, following the pattern of its three existing outputs
-# (property node inside Try -> Try border -> If border with feedback -> canvas ControlPoint -> IO pin).
-TIMINGS_NODE = r'''
-                    <Node Bounds="585,370,80,26" Id="@ID(t-getframeinfo)">
-                      <p:NodeReference LastCategoryFullName="VL.MediaPipe.TimerResult.Timers" LastDependency="VL.MediaPipe.dll">
-                        <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
-                        <Choice Kind="OperationCallFlag" Name="GetFrameInfo" />
-                      </p:NodeReference>
-                      <Pin Id="@ID(t-gfi-input)" Name="Input" Kind="StateInputPin" />
-                      <Pin Id="@ID(t-gfi-frameid)" Name="Frame Id" Kind="OutputPin" />
-                      <Pin Id="@ID(t-gfi-latency)" Name="Frame Latency" Kind="OutputPin" />
-                      <Pin Id="@ID(t-gfi-tag)" Name="Frame Tag" Kind="OutputPin" />
-                    </Node>'''
-
-TIMINGS_TRY_CPS = r'''
-                  <ControlPoint Id="@ID(t-try-cp-id)" Bounds="590,411" Alignment="Bottom" />
-                  <ControlPoint Id="@ID(t-try-cp-lat)" Bounds="650,411" Alignment="Bottom" />
-                  <ControlPoint Id="@ID(t-try-cp-tag)" Bounds="710,411" Alignment="Bottom" />'''
-
+# Timings: Frame Id, Frame Latency (ms) and Frame Tag. GetTimers' value leaves the If region through a feedback border
+# (null until the first timers message) into Timers.FrameInfoOf on the canvas, which gives -1 for no timers: inside the
+# Try region, as the three upstream outputs are, the outputs would read 0 (the type default) before the first message.
 TIMINGS_IF_CPS = r'''
-              <ControlPoint Id="@ID(t-if-bottom-id)" Bounds="590,485" Alignment="Bottom" />
-              <ControlPoint Id="@ID(t-if-top-id)" Bounds="610,244" Alignment="Top" />
-              <ControlPoint Id="@ID(t-if-bottom-lat)" Bounds="650,485" Alignment="Bottom" />
-              <ControlPoint Id="@ID(t-if-top-lat)" Bounds="670,244" Alignment="Top" />
-              <ControlPoint Id="@ID(t-if-bottom-tag)" Bounds="710,485" Alignment="Bottom" />
-              <ControlPoint Id="@ID(t-if-top-tag)" Bounds="730,244" Alignment="Top" />'''
+              <ControlPoint Id="@ID(t-if-bottom-timers)" Bounds="590,485" Alignment="Bottom" />
+              <ControlPoint Id="@ID(t-if-top-timers)" Bounds="610,244" Alignment="Top" />'''
 
-TIMINGS_CANVAS_CPS = r'''
-            <ControlPoint Id="@ID(t-cp-id)" Bounds="590,525" />
-            <ControlPoint Id="@ID(t-cp-lat)" Bounds="650,525" />
-            <ControlPoint Id="@ID(t-cp-tag)" Bounds="710,525" />'''
+TIMINGS_CANVAS = r'''
+            <Node Bounds="585,500,105,19" Id="@ID(t-frameinfoof)">
+              <p:NodeReference LastCategoryFullName="VL.MediaPipe.TimerResult.Timers" LastDependency="VL.MediaPipe.dll">
+                <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                <Choice Kind="OperationCallFlag" Name="FrameInfoOf" />
+              </p:NodeReference>
+              <Pin Id="@ID(t-fio-timers)" Name="Timers" Kind="InputPin" />
+              <Pin Id="@ID(t-fio-frameid)" Name="Frame Id" Kind="OutputPin" />
+              <Pin Id="@ID(t-fio-latency)" Name="Frame Latency" Kind="OutputPin" />
+              <Pin Id="@ID(t-fio-tag)" Name="Frame Tag" Kind="OutputPin" />
+            </Node>
+            <ControlPoint Id="@ID(t-cp-id)" Bounds="590,545" />
+            <ControlPoint Id="@ID(t-cp-lat)" Bounds="650,545" />
+            <ControlPoint Id="@ID(t-cp-tag)" Bounds="710,545" />'''
 
 TIMINGS_PINS = r'''
-            <Pin Id="@ID(t-pin-frameid)" Name="Frame Id" Kind="OutputPin" Bounds="706,657" Summary="Source = Texture: the frame these timings belong to. -1 for camera input.">
+            <Pin Id="@ID(t-pin-frameid)" Name="Frame Id" Kind="OutputPin" Bounds="706,657" Summary="Source = Texture: the frame these timings belong to. -1 for camera input and before the first timings.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Integer32" />
               </p:TypeAnnotation>
             </Pin>
-            <Pin Id="@ID(t-pin-latency)" Name="Frame Latency (ms)" Kind="OutputPin" Bounds="806,657" Summary="Source = Texture: milliseconds from sending the frame to receiving its timings, on the vvvv clock. Includes Detection Time; excludes the texture readback before sending. -1 for camera input.">
+            <Pin Id="@ID(t-pin-latency)" Name="Frame Latency (ms)" Kind="OutputPin" Bounds="806,657" Summary="Source = Texture: milliseconds from sending the frame to receiving its timings, on the vvvv clock. Includes Detection Time; excludes the texture readback before sending. -1 for camera input and before the first timings.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Float32" />
               </p:TypeAnnotation>
             </Pin>
-            <Pin Id="@ID(t-pin-tag)" Name="Frame Tag" Kind="OutputPin" Bounds="906,657" Summary="Source = Texture: the MediaPipe node's Input Frame Tag of the frame these timings belong to, e.g. its camera frame id. -1 for camera input or without a tag.">
+            <Pin Id="@ID(t-pin-tag)" Name="Frame Tag" Kind="OutputPin" Bounds="906,657" Summary="Source = Texture: the MediaPipe node's Input Frame Tag of the frame these timings belong to, e.g. its camera frame id. -1 for camera input, without a tag, and before the first timings.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Integer32" />
               </p:TypeAnnotation>
@@ -338,22 +328,60 @@ TIMINGS_PINS = r'''
 GET_TIMERS_VALUE = "Da1bwDv141sPLRhqiWJ7oB"
 
 TIMINGS_LINKS = rf'''
-          <Link Id="@ID(t-l-gfi)" Ids="{GET_TIMERS_VALUE},@ID(t-gfi-input)" />
-          <Link Id="@ID(t-l-id-try)" Ids="@ID(t-gfi-frameid),@ID(t-try-cp-id)" />
-          <Link Id="@ID(t-l-id-if)" Ids="@ID(t-try-cp-id),@ID(t-if-bottom-id)" />
-          <Link Id="@ID(t-l-id-fb)" Ids="@ID(t-if-top-id),@ID(t-if-bottom-id)" IsFeedback="true" />
-          <Link Id="@ID(t-l-id-cp)" Ids="@ID(t-if-bottom-id),@ID(t-cp-id)" />
+          <Link Id="@ID(t-l-timers-if)" Ids="{GET_TIMERS_VALUE},@ID(t-if-bottom-timers)" />
+          <Link Id="@ID(t-l-timers-fb)" Ids="@ID(t-if-top-timers),@ID(t-if-bottom-timers)" IsFeedback="true" />
+          <Link Id="@ID(t-l-timers-fio)" Ids="@ID(t-if-bottom-timers),@ID(t-fio-timers)" />
+          <Link Id="@ID(t-l-id-cp)" Ids="@ID(t-fio-frameid),@ID(t-cp-id)" />
           <Link Id="@ID(t-l-id-io)" Ids="@ID(t-cp-id),@ID(t-pin-frameid)" IsHidden="true" />
-          <Link Id="@ID(t-l-lat-try)" Ids="@ID(t-gfi-latency),@ID(t-try-cp-lat)" />
-          <Link Id="@ID(t-l-lat-if)" Ids="@ID(t-try-cp-lat),@ID(t-if-bottom-lat)" />
-          <Link Id="@ID(t-l-lat-fb)" Ids="@ID(t-if-top-lat),@ID(t-if-bottom-lat)" IsFeedback="true" />
-          <Link Id="@ID(t-l-lat-cp)" Ids="@ID(t-if-bottom-lat),@ID(t-cp-lat)" />
+          <Link Id="@ID(t-l-lat-cp)" Ids="@ID(t-fio-latency),@ID(t-cp-lat)" />
           <Link Id="@ID(t-l-lat-io)" Ids="@ID(t-cp-lat),@ID(t-pin-latency)" IsHidden="true" />
-          <Link Id="@ID(t-l-tag-try)" Ids="@ID(t-gfi-tag),@ID(t-try-cp-tag)" />
-          <Link Id="@ID(t-l-tag-if)" Ids="@ID(t-try-cp-tag),@ID(t-if-bottom-tag)" />
-          <Link Id="@ID(t-l-tag-fb)" Ids="@ID(t-if-top-tag),@ID(t-if-bottom-tag)" IsFeedback="true" />
-          <Link Id="@ID(t-l-tag-cp)" Ids="@ID(t-if-bottom-tag),@ID(t-cp-tag)" />
+          <Link Id="@ID(t-l-tag-cp)" Ids="@ID(t-fio-tag),@ID(t-cp-tag)" />
           <Link Id="@ID(t-l-tag-io)" Ids="@ID(t-cp-tag),@ID(t-pin-tag)" IsHidden="true" />'''
+
+# ---------------------------------------------------------------------------------------------------------------
+# GetHands: public, so other documents reach the hand results object (MediaPipe.HandResults.Handresults: per hand the
+# 21 normalized landmarks and handedness categories, plus the result's Frame Tag), e.g. VL.HandTracking's
+# MediaPipeHandSource. Upstream keeps every Get* accessor internal; this one only changes its visibility.
+GET_HANDS_INTERNAL = '<Patch Id="R6Y9nI8otstLlKGSyiASW7" Name="GetHands (Internal)">'
+GET_HANDS_PUBLIC = '<Patch Id="R6Y9nI8otstLlKGSyiASW7" Name="GetHands">'
+# The MediaPipe class carries Aspects="Internal", which hides all of its operations from other documents whatever their
+# names ("Not found: GetHands"). Its other operations stay hidden by their "(Internal)" names; Create/Update are the
+# process node's own.
+MEDIAPIPE_CLASS_INTERNAL = '<Node Name="MediaPipe" Aspects="Internal" Bounds="150,238" Id="Q5HejFxEzF3O35hE7Mpbcl">'
+MEDIAPIPE_CLASS_PUBLIC = '<Node Name="MediaPipe" Bounds="150,238" Id="Q5HejFxEzF3O35hE7Mpbcl">'
+
+# HandDetector: Frame Tag (open question Q6). GetHands' value leaves the outer If region through a feedback border into
+# Handresults.FrameTagOf on the canvas (-1 before the first results), as Timings does with its timers.
+GET_HANDS_VALUE = "G2Ns2phzDJ8Qa4a1EmlGmh"
+
+HAND_IF_CPS = r'''
+              <ControlPoint Id="@ID(hd-if-bottom-results)" Bounds="420,789" Alignment="Bottom" />
+              <ControlPoint Id="@ID(hd-if-top-results)" Bounds="420,218" Alignment="Top" />'''
+
+HAND_CANVAS = r'''
+            <Node Bounds="415,810,85,19" Id="@ID(hd-frametagof)">
+              <p:NodeReference LastCategoryFullName="MediaPipe.HandResults.Handresults" LastDependency="VL.MediaPipe.dll">
+                <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                <Choice Kind="OperationCallFlag" Name="FrameTagOf" />
+              </p:NodeReference>
+              <Pin Id="@ID(hd-fto-results)" Name="Hand Results" Kind="InputPin" />
+              <Pin Id="@ID(hd-fto-tag)" Name="Frame Tag" Kind="OutputPin" />
+            </Node>
+            <ControlPoint Id="@ID(hd-cp-tag)" Bounds="420,850" />'''
+
+HAND_PINS = r'''
+            <Pin Id="@ID(hd-pin-tag)" Name="Frame Tag" Kind="OutputPin" Bounds="420,870" Summary="Source = Texture: the MediaPipe node's Input Frame Tag of the frame the current hand results were detected on, e.g. its camera frame id. -1 for camera input, without a tag, and before the first results.">
+              <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+                <Choice Kind="TypeFlag" Name="Integer32" />
+              </p:TypeAnnotation>
+            </Pin>'''
+
+HAND_LINKS = rf'''
+          <Link Id="@ID(hd-l-results-if)" Ids="{GET_HANDS_VALUE},@ID(hd-if-bottom-results)" />
+          <Link Id="@ID(hd-l-results-fb)" Ids="@ID(hd-if-top-results),@ID(hd-if-bottom-results)" IsFeedback="true" />
+          <Link Id="@ID(hd-l-results-fto)" Ids="@ID(hd-if-bottom-results),@ID(hd-fto-results)" />
+          <Link Id="@ID(hd-l-tag-cp)" Ids="@ID(hd-fto-tag),@ID(hd-cp-tag)" />
+          <Link Id="@ID(hd-l-tag-io)" Ids="@ID(hd-cp-tag),@ID(hd-pin-tag)" IsHidden="true" />'''
 
 
 class Doc:
@@ -396,14 +424,18 @@ def build(base_text: str) -> str:
     doc.insert_after_line('<Pad Id="D4qXaoHXASuN6I4BI09UYG" Bounds="343,700" />', CANVAS)
     doc.insert_before_line('<Patch Id="RAjM2C25AeyMcMHy6wfJFl" Name="Create" />', LINKS)
     # Timings definition
-    doc.insert_before_line('<Patch Id="H9UuX7hmT84OUksMedEdUh" Name="Dispose" />', TIMINGS_NODE)
-    doc.insert_after_line('<ControlPoint Id="FFj96acS77kLWXmr2YPXMr" Bounds="475,411" Alignment="Bottom" />', TIMINGS_TRY_CPS)
     doc.insert_after_line('<ControlPoint Id="EMNdDDY0R66MlTugHt3VIm" Bounds="551,244" Alignment="Top" />', TIMINGS_IF_CPS)
-    doc.insert_after_line('<ControlPoint Id="FqPlIL7brwBP6nA0IFxJVq" Bounds="469,525" />', TIMINGS_CANVAS_CPS)
+    doc.insert_after_line('<ControlPoint Id="FqPlIL7brwBP6nA0IFxJVq" Bounds="469,525" />', TIMINGS_CANVAS)
     doc.insert_after_block('<Pin Id="CdKBx5xwST6OM4Vs6LaWzY" Name="Source Frame Rate"', "</Pin>", TIMINGS_PINS)
     doc.insert_after_line('<Link Id="QdEpuHGCGDDPp2ZTkCEt7k" Ids="FFj96acS77kLWXmr2YPXMr,QVfeJv9HdgXL0Mn5dI0Awl" />', TIMINGS_LINKS)
-    doc.replace_once('<Node Bounds="192,238,387,253" Id="KfJeXH6k9EDL834Hvieacg">', '<Node Bounds="192,238,580,253" Id="KfJeXH6k9EDL834Hvieacg">')
-    doc.replace_once('<Node Bounds="250,331,317,86" Id="USXBRbjheeGOmxCeQ5Q101">', '<Node Bounds="250,331,510,86" Id="USXBRbjheeGOmxCeQ5Q101">')
+    doc.replace_once('<Node Bounds="192,238,387,253" Id="KfJeXH6k9EDL834Hvieacg">', '<Node Bounds="192,238,440,253" Id="KfJeXH6k9EDL834Hvieacg">')
+    # MediaPipe: GetHands public; HandDetector definition: Frame Tag
+    doc.replace_once(MEDIAPIPE_CLASS_INTERNAL, MEDIAPIPE_CLASS_PUBLIC)
+    doc.replace_once(GET_HANDS_INTERNAL, GET_HANDS_PUBLIC)
+    doc.insert_after_line('<ControlPoint Id="AE21COVXsXzOIG34pCPnk5" Bounds="241,218" Alignment="Top" />', HAND_IF_CPS)
+    doc.insert_after_line('<ControlPoint Id="TJjUBp4qIcQOrTl9taSiZU" Bounds="330,819" />', HAND_CANVAS)
+    doc.insert_after_line('<Pin Id="E2HQCAWRudwNYXiZzgUR0k" Name="World Landmarks" Kind="OutputPin" Bounds="304,751" />', HAND_PINS)
+    doc.insert_after_line(f'<Link Id="Cmt1vJRwogyLGjU5QE0SS5" Ids="{GET_HANDS_VALUE},RZLSdyvBABkLzfgLI5jw9P" />', HAND_LINKS)
     # Document
     doc.insert_after_line('<NugetDependency Id="NUSiv3FPG3gMWwRu79ffAI" Location="VL.IO.WebServer" Version="1.0.1" />', DEPENDENCY)
     doc.replace_once(CEF_UPSTREAM, CEF_LIMINAL)
