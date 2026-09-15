@@ -54,7 +54,7 @@ UPDATE_PINS = r'''
                 <Choice Kind="TypeFlag" Name="Texture" />
               </p:TypeAnnotation>
             </Pin>
-            <Pin Id="@ID(pin-tag)" Name="Input Frame Tag" Kind="InputPin" DefaultValue="-1" Summary="Source = Texture: what Input Texture shows in this frame, e.g. a camera frame id. The results and timings computed from that frame report it as their Frame Tag. The readback sends a frame 1 to 4 frames later, so this tag, not a value read next to the results, tells which frame they belong to. -1: no tag.">
+            <Pin Id="@ID(pin-tag)" Name="Input Frame Tag" Kind="InputPin" DefaultValue="-1" Summary="Source = Texture: what Input Texture shows in this frame, e.g. a camera frame id. The results and timings computed from that frame report it as their Frame Tag. The readback sends a frame one frame later, so this tag, not a value read next to the results, tells which frame they belong to. -1: no tag.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Integer32" />
               </p:TypeAnnotation>
@@ -133,7 +133,7 @@ CANVAS = r'''
                   <Pin Id="@ID(rs-texturesize)" Name="Texture Size" Kind="InputPin" />
                   <Pin Id="@ID(rs-result)" Name="Size" Kind="OutputPin" />
                 </Node>
-                <Pad Id="@ID(pad-framedelay)" Comment="Frame Delay" Bounds="2602,225,35,15" ShowValueBox="true" isIOBox="true" Value="5">
+                <Pad Id="@ID(pad-framedelay)" Comment="Frame Delay" Bounds="2602,225,35,15" ShowValueBox="true" isIOBox="true" Value="1">
                   <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                     <Choice Kind="TypeFlag" Name="Integer32" />
                   </p:TypeAnnotation>

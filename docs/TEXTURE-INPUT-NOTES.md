@@ -366,6 +366,43 @@ document VL.MediaPipe.vl not found" (a package document has no Application; iden
 change). `tools/vvvv-node/compat/MediaPipeHandSourceSmoke.vl` (DocumentDependency on this document) compiles and runs:
 GetHands' value into MediaPipeHandSource publishes the Kinect v2 frame's hand with the frame tag fed to Input Frame Tag.
 
+## W11. Readback one frame behind, each frame sent once (2026-09-15, branch `feat/camera-frame-id`)
+
+**Why.** In the standalone show patch (depth-handtracking plan sensor-topology-eval M9), prepass → packet send took
+p50 31.5 / p95 48 ms, the largest stage of e2e 52 / 69 ms (Femto rig replay). Two causes, measured one at a time on the
+rig replay (60 s, 1,808 frames, vvvv 7.2-0014):
+- **The readback policy.** W9 kept Stride's ImageReadback: the draw of frame f stages a copy and reads an older one, and
+  the patch sees it in update f + 1. So the newest possible image is 2 frames old (readback delay p50 3, max 4). The GPU
+  runs about one frame behind the CPU: at update f + 1, frame f's copy is still queued (non-blocking read at update time
+  alone: delay still 2 frames, E2).
+- **Repeated sends.** The readback returns an image every frame, a 30 fps camera changes it every second frame, and the
+  page answers within ~12 ms, so half of all packets repeated a frame already sent (1,894 of 3,679). A new frame then
+  waited behind the repeat, or was superseded.
+
+**What changed.**
+- `TaggedTextureReadback`: the draw only stages copies (a tagged texture once per tag); `Readback` in the update reads
+  the newest unread copy that is finished, and waits for a copy that is Frame Delay updates old. Older unread copies are
+  dropped, no copy is returned twice, the last image stays available (Result) until a newer one is read.
+  `TaggedReadbackRing.Read` holds the slot choice (checked against a GPU model in FramePacketCheck, Frame Delay 1 and 3).
+- `VL.MediaPipe.vl` (generated): Frame Delay 5 → **1**, so frame f's image is read in update f + 1.
+- `FramePacket.Pack`: a tagged image whose tag equals the sender's last packet is not sent again (not counted as
+  dropped). Untagged images behave as before.
+
+**Measurements (rig replay; prepass → packet_send, e2e and delivery over the whole run, render p99 from 5 s).**
+
+| Run | prepass → send p50 / p95 | e2e p50 / p95 / p99 | repeated sends | delivery | render p99 |
+|---|---|---|---|---|---|
+| E0 W9 (Frame Delay 5) | 31.5 / 48.0 | 51.9 / 69.2 / 85.5 | 1,894 | 0.9873 | 16.96 |
+| E1 skip repeated tags only | 32.2 / 48.8 | 50.6 / 69.3 / 86.8 | 0 | 0.9923 | 16.93 |
+| E2 non-blocking read in the update only | 31.1 / 32.4 | 51.8 / 69.2 / 86.2 | 1,802 | 0.9812 | 16.95 |
+| E5 W9 ring with Frame Delay 1 (blocks in the draw) | 14.0 / 29.9 | 35.5 / 52.2 / 69.8 | 1,765 | 0.9895 | 17.01 (max 41.7) |
+| E6 read in the update, wait for frame f's copy, stage once, skip repeats | **15.7 / 16.2** | **34.1 / 51.7 / 70.0** | 0 | 0.9889 | **16.95** |
+
+E6 is this change (the committed code also tries the non-blocking read first). Every frame E6 did not deliver fell in
+the first 6 s of replayed frames, while the page answered slowly (timers latency p95 ~50 ms, max 103 ms, then p95
+15 ms); after 5 s delivery was 1.0 (W9: 0.9952). "The node is stalling the GPU" warnings (8 per run) come from
+VL.TrackingDepthPrepass's TextureToImage, not from this readback, and did not change.
+
 ---
 
 # Wave 1 record: M0 groundwork notes (2026-09-13)

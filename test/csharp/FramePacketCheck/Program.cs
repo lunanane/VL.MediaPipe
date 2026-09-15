@@ -122,6 +122,19 @@ Handresults.FrameTagOf(null, out var noHandTag);
 Check(handTag == 1234 && noHandTag == -1, "FrameTagOf: the hand results' Frame Tag; -1 before any results (HandDetector at start-up)");
 var cameraHands = JsonSerializer.Deserialize<HandRoot>("{\"handResults\":{\"landmarks\":[]}}", options)!;
 Check(cameraHands.HandResults.FrameTag == -1 && trace.Messages.Count == 3, "camera-mode results (no frame id): FrameTag -1, not traced");
+// A readback returns its newest image every frame, so the same tagged frame reaches Pack again while the page is free.
+var repeatOwner = new object();
+Check(Pack(repeatOwner, true, "c", 0, 0, out _, out var repeatFirst, out _, tag: 500), "Pack: tagged frame 500 is sent");
+Echo(repeatFirst);
+Check(!Pack(repeatOwner, true, "c", 0, 1000, out var repeatPacket, out var repeatId, out var repeatDropped, tag: 500)
+    && repeatPacket.Count == 0 && repeatId == repeatFirst && repeatDropped == 0,
+    "Pack: a frame tag that was already sent is not sent again (not counted as dropped)");
+Check(Pack(repeatOwner, true, "c", 0, 1000, out _, out var repeatNext, out _, tag: 501) && repeatNext > repeatFirst, "Pack: the next frame tag is sent");
+Echo(repeatNext);
+var sentUntagged = Pack(repeatOwner, true, "c", 0, 1000, out _, out var untaggedA, out _);
+Echo(untaggedA);
+Check(sentUntagged && Pack(repeatOwner, true, "c", 0, 1000, out _, out var untaggedB, out _) && untaggedB > untaggedA,
+    "Pack: untagged images are sent on every acknowledged frame, as before");
 FrameTrace.Listener = new ThrowingListener();
 Check(Pack(tagOwner, true, "c", 0, 0, out _, out var afterThrow, out _, tag: 9) && FramePacket.TagOf(afterThrow) == 9 && FrameTrace.ListenerFailures == 1,
     "FrameTrace: a throwing listener is counted, the packet is still built");
@@ -152,54 +165,65 @@ Check(hands.HandResults.FrameId == 17 && hands.HandResults.SourceTimestamp == 5.
 Check(JsonSerializer.Serialize(new TimerRoot { Timers = textureTimers }).Contains("FrameTag") == false, "FrameTag is not part of the JSON contract");
 
 // ---- TaggedTextureReadback staging ring vs a GPU model ----------------------------------------------------------
-// Each frame stages a copy (tag = frame number) that the simulated GPU finishes 0..6 frames later. The ring must return
-// what Stride's ImageReadback returns: the newest finished older copy without waiting, else the current one blocking.
+// A 30 fps camera in a 60 Hz loop: the tag changes every second update, and the draw after that update copies the frame
+// once. The simulated GPU finishes a copy 1..4 updates after it was made. Update u goes through the unread copies from the
+// newest and must read the first one that is finished or, waiting for it, Frame Delay updates old.
+foreach (var frameDelay in new[] { 1, 3 })
 {
-    var ring = new TaggedReadbackRing(5);
+    var ring = new TaggedReadbackRing(frameDelay);
     var rng = new Random(11);
-    var slotFrame = new int[ring.Count];
-    var readyAt = new int[ring.Count];
-    Array.Fill(slotFrame, -1);
-    int wrongTag = 0, notNewest = 0, delayOutOfRange = 0, blockingFrames = 0, results = 0, nonMonotonic = 0, lastNonBlockingTag = -1;
-    var delays = new SortedDictionary<int, int>();
-    for (int f = 0; f < 20_000; f++)
+    var staged = new List<(int Tag, long At, long ReadyAt, int Slot)>();
+    int taken = -1, wrongTag = 0, wrongChoice = 0, repeatedOrBack = 0, blockingReads = 0, reads = 0, lastTag = -1;
+    var delays = new SortedDictionary<long, int>();
+    for (long u = 1; u <= 20_000; u++)
     {
-        int slot = ring.Stage(f);
-        slotFrame[slot] = f;
-        readyAt[slot] = f + (rng.Next(10) < 8 ? rng.Next(0, 3) : rng.Next(3, 7));
         int readSlot = -1;
-        bool available = ring.Resolve((s, doNotWait) =>
+        bool got = ring.Read((s, doNotWait) =>
         {
-            bool ok = !doNotWait || readyAt[s] <= f;
+            var copy = staged.FindLast(c => c.Slot == s);
+            bool ok = !doNotWait || copy.ReadyAt <= u;
             if (ok) readSlot = s;
             return ok;
-        }, out var tag, out var blocking);
-        if (!available) continue;
-        results++;
-        if (blocking) blockingFrames++;
-        if (tag != slotFrame[readSlot]) wrongTag++;
-        int newestReady = Enumerable.Range(0, ring.Count).Where(s => s != slot && slotFrame[s] >= 0 && readyAt[s] <= f)
-            .Select(s => slotFrame[s]).DefaultIfEmpty(-1).Max();
-        if (!blocking && tag != newestReady) notNewest++;
-        if (blocking && (tag != f || newestReady >= 0)) notNewest++;
-        int delay = f - tag;
-        delays[delay] = delays.GetValueOrDefault(delay) + 1;
-        if (!blocking)
+        }, u, frameDelay, out var tag, out var blocking);
+        int expected = -1;
+        bool expectedBlocking = false;
+        for (int i = staged.Count - 1; i > taken; i--)
         {
-            if (delay < 1 || delay > ring.Count - 1) delayOutOfRange++;
-            // A blocking read returns the current frame; the next frame may return an older copy that finished late, as
-            // Stride's ImageReadback does. Non-blocking reads never go back.
-            if (tag < lastNonBlockingTag) nonMonotonic++;
-            lastNonBlockingTag = tag;
+            if (staged[i].ReadyAt <= u) { expected = staged[i].Tag; break; }
+            if (u - staged[i].At >= frameDelay) { expected = staged[i].Tag; expectedBlocking = true; break; }
+        }
+        if ((got ? tag : -1) != expected || blocking != expectedBlocking) wrongChoice++;
+        if (got)
+        {
+            reads++;
+            if (blocking) blockingReads++;
+            var copy = staged.FindLast(c => c.Slot == readSlot);
+            if (copy.Tag != tag) wrongTag++;
+            if (tag <= lastTag) repeatedOrBack++;
+            lastTag = tag;
+            taken = staged.FindLastIndex(c => c.Tag == tag);
+            delays[u - copy.At] = delays.GetValueOrDefault(u - copy.At) + 1;
+        }
+        int cameraFrame = (int)(u / 2);
+        if (staged.Count == 0 || staged[^1].Tag != cameraFrame)
+        {
+            int lag = rng.Next(10) < 8 ? rng.Next(0, 2) : rng.Next(2, 4);
+            staged.Add((cameraFrame, u, u + 1 + lag, ring.Stage(cameraFrame, u)));
         }
     }
-    Check(results > 19_000 && wrongTag == 0, $"ring: every result carries the tag of the frame its slot was copied from ({results} results)");
-    Check(notNewest == 0, "ring: the newest finished older copy is returned, the current copy only when none is ready (blocking)");
-    Check(delayOutOfRange == 0 && nonMonotonic == 0, $"ring: non-blocking delays are 1..4 frames and never go back (delays {string.Join(" ", delays.Select(d => $"{d.Key}:{d.Value}"))}, blocking {blockingFrames})");
-    var fresh = new TaggedReadbackRing(3);
-    Check(fresh.Stage(7) == 0 && fresh.Resolve((_, _) => false, out var firstTag, out var firstBlocking) && firstBlocking && firstTag == 7,
-        "ring: the first frame has no older copy, so it is read back blocking with its own tag");
+    var delayText = string.Join(" ", delays.Select(d => $"{d.Key}:{d.Value}"));
+    Check(reads > 9_000 && wrongTag == 0, $"ring (Frame Delay {frameDelay}): every read carries the tag of the frame its slot was copied from ({reads} reads)");
+    Check(wrongChoice == 0, $"ring (Frame Delay {frameDelay}): from the newest unread copy, the first that is finished or Frame Delay updates old (waited for)");
+    Check(repeatedOrBack == 0, $"ring (Frame Delay {frameDelay}): no copy is read twice and reads never go back");
+    if (frameDelay == 1)
+        Check(delays.Keys.All(d => d == 1) && reads >= staged.Count - 1,
+            $"ring (Frame Delay 1): every copy is read in the update after its draw, none dropped ({reads} of {staged.Count}, blocking {blockingReads})");
+    else
+        Check(delays.Keys.All(d => d >= 1 && d <= frameDelay) && blockingReads > 0,
+            $"ring (Frame Delay {frameDelay}): copies are read 1..{frameDelay} updates after their draw (delays {delayText}, blocking {blockingReads})");
 }
+Check(!new TaggedReadbackRing(2).Read((_, _) => true, 5, 1, out var noTag2, out var noBlocking) && noTag2 == -1 && !noBlocking,
+    "ring: nothing staged, nothing read");
 
 Console.WriteLine(failures == 0 ? "ALL CHECKS PASSED" : $"{failures} CHECK(S) FAILED");
 return failures == 0 ? 0 : 1;

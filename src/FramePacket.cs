@@ -60,6 +60,7 @@ public static class FramePacket
         public double InFlightSince;
         public int DroppedFrames;
         public int AckTimeouts;
+        public int LastTag = -1;
     }
 
     private static readonly ConditionalWeakTable<object, Sender> s_senders = new();
@@ -124,6 +125,7 @@ public static class FramePacket
     /// <summary>
     /// Builds the next frame packet from image when apply is true, a client is connected, the previous packet's send
     /// has left the queue and the page has acknowledged it (its timers echoed the frame id), or ackTimeout ms passed.
+    /// A tagged image whose frame tag is the one of this sender's last packet is not sent again.
     /// Returns true on the frames a packet was built: connect to SendData's Apply, and packet to its Data.
     /// </summary>
     /// <param name="owner">Identifies the sender whose state (buffers, in-flight packet) is used: the WebSocketServer.</param>
@@ -152,6 +154,8 @@ public static class FramePacket
         droppedFrames = sender.DroppedFrames;
         if (!apply || image is null || string.IsNullOrEmpty(client))
             return false;
+        if (frameTag >= 0 && frameTag == sender.LastTag)
+            return false; // the readback repeats its newest image until a newer copy is read: this frame was sent
 
         var now = NowMs;
         if (sender.InFlightFrameId >= 0)
@@ -194,6 +198,7 @@ public static class FramePacket
         sender.InFlightFrameId = id;
         sender.InFlightSince = now;
         sender.LastFrameId = id;
+        sender.LastTag = tag;
         frameId = unchecked((int)id);
         packet = buffer;
         FrameTrace.Packet(id, tag, now);
