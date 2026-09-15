@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Uses a throw-away SDK project whose PackageReferences mirror VL.MediaPipe.vl's NugetDependencies:
-    VL.CEF 0.8.2 (+ VL.CEF.Stride 0.8.2 for the help patches) and VL.IO.WebServer 1.0.1. VL.IO.WebSocket 1.1.0
+    VL.CEF 0.7.2 (+ VL.CEF.Stride 0.7.2 for the help patches; the version vvvv 7.2 and 7.5 ship) and VL.IO.WebServer 1.0.1. VL.IO.WebSocket 1.1.0
     ships with vvvv 7.4 (packs\) and is not restored.
 
     Package sources (a NuGet.config next to the project, <clear/> first): the local global-packages folder used
@@ -36,8 +36,8 @@ $project = @'
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="VL.CEF" Version="0.8.2" />
-    <PackageReference Include="VL.CEF.Stride" Version="0.8.2" />
+    <PackageReference Include="VL.CEF" Version="0.7.2" />
+    <PackageReference Include="VL.CEF.Stride" Version="0.7.2" />
     <PackageReference Include="VL.IO.WebServer" Version="1.0.1" />
   </ItemGroup>
 </Project>

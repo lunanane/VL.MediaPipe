@@ -6852,7 +6852,7 @@
   <NugetDependency Id="SsBopOnOI8iPyzbxPdbPCd" Location="VL.IO.WebSocket" Version="1.1.0" />
   <PlatformDependency Id="GX4pa4iUeRqMYAqu2F7GiM" Location="VL.MediaPipe.dll" />
   <PlatformDependency Id="SO0763KgsPyN7d2jHLPUZ6" Location="System.Text.Json" />
-  <NugetDependency Id="G3a6CNjID7kOWzilC83hEQ" Location="VL.CEF" Version="0.8.2" />
+  <NugetDependency Id="G3a6CNjID7kOWzilC83hEQ" Location="VL.CEF" Version="0.7.2" />
   <NugetDependency Id="NUSiv3FPG3gMWwRu79ffAI" Location="VL.IO.WebServer" Version="1.0.1" />
   <NugetDependency Id="XvEYNEqBF0lpVomhP2vX9o" Location="VL.Stride" Version="2025.7.1" />
 </Document>

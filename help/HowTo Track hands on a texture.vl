@@ -2,7 +2,7 @@
 <Document xmlns:p="property" xmlns:r="reflection" Id="ViGoJFN4LPznFBcFWjdjRm" LanguageVersion="2025.7.4-0008-g793e4b395d" Version="0.128">
   <NugetDependency Id="GYcBdTw00ER4inKXUh9olp" Location="VL.CoreLib" />
   <NugetDependency Id="KHhbUlvH20Uu5dXv5FHtMn" Location="VL.Stride" />
-  <NugetDependency Id="JHHqK0GzSmNGnrO9uJ3bQ9" Location="VL.CEF.Stride" Version="0.8.2" />
+  <NugetDependency Id="JHHqK0GzSmNGnrO9uJ3bQ9" Location="VL.CEF.Stride" Version="0.7.2" />
   <NugetDependency Id="GqYtGIWQIOkyZHGStbt053" Location="VL.MediaPipe" />
   <PlatformDependency Id="LM0dBe1oUhcN7nZH1vz6l9" Location="../lib/net8.0/VL.MediaPipe.dll" />
   <Patch Id="NIDCNupBJzfmdIDkhKF9V8">
