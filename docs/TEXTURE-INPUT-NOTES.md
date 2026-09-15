@@ -403,6 +403,32 @@ the first 6 s of replayed frames, while the page answered slowly (timers latency
 15 ms); after 5 s delivery was 1.0 (W9: 0.9952). "The node is stalling the GPU" warnings (8 per run) come from
 VL.TrackingDepthPrepass's TextureToImage, not from this readback, and did not change.
 
+**Verification after commit e859fb7** (standalone patch now including M11's SharedMemoryFrameWriter and
+HandTrackingOscSender; other agents' pytest and S1/S2 runs interleaved):
+
+| Run | prepass → send p50 / p95 / p99 | send → detect p50 / p95 | e2e p50 / p95 / p99 | delivery | render p99 |
+|---|---|---|---|---|---|
+| Kinect 10.5 min loop, before (M9) | 47.8 / 64.8 / 65.4 | 14.6 / 21.2 | 67.8 / 84.9 / 101.6 | 0.9939 | 16.93 |
+| Kinect 10.5 min loop, after | 15.8 / 16.1 / 17.1 | 14.2 / 22.0 | 33.9 / 50.8 / 51.7 | 0.9999 | 17.10 |
+| S1 replay:sweep x3, before (M9) | 48.1-48.5 p50 | 16.7-20.5 p50 | p50 72.8-88.6, p95 113-133 | 0.88-0.96 | 16.98-17.47 |
+| S1 replay:sweep x3, after (`--seconds 30`) | 15.8 / 16.1-16.2 | 14.0-14.9 / 26.2-27.5 | p50 33.9-34.0, p95 51.4-51.9 | 1.0 x3 | 16.96-17.29 |
+| Femto rig replay, after (machine loaded) | 14.5 / 17.3 / 31.1 | 15.9 / 24.1 | 34.9 / 56.2 / 86.4 | 0.9618 (1.0 after 12 s) | 17.61 |
+
+- TagCheck (synthetic Kinect frames, tag per frame): `empty_detected` 0, mapping loss 0, readback delay 1 frame,
+  repeated sends 152 → 0.
+- M7 compat gate on 7.2 (`tools\vvvv-node\compat\run-compat.ps1 -Hosts 7.2 -Seconds 60`): vvvvc exit 0, runtime 60 s with
+  0 FAIL/CRIT, MediaPipe graph started. Every probe log above: 0 FAIL/CRIT; "stalling the GPU" warnings 8 per run as before.
+- **Render under GPU load.** On a quiet machine long vvvv frames do not coincide with the frames that read a copy (E6:
+  render p99 16.97 with a read, 16.99 without). With the GPU busy (the loaded rig run), the wait for frame f's copy
+  grows: p99 18.32 with a read, 17.34 without. Frame Delay 2 avoids that wait at the cost of a second frame (E2).
+- **Where e2e ends up** (~34 ms p50 on replays): injection → prepass ~1-3 ms, one vvvv frame of readback ~15.8 ms,
+  the page's detection ~11 ms (no hands) to ~14 ms (hands), and the wait for the next vvvv update that consumes the
+  results ~4-6 ms p50 (up to one frame). The page's timers follow its results by 0.07 ms p50, so acknowledging on the
+  results instead would not free the page sooner.
+- **Environment.** While another vvvv with VL.CEF 0.7.2 runs (e.g. the liminal-room app), a second vvvv fails with
+  "Failed to initialize CEF runtime" followed by "Value cannot be null (Parameter 'ptr')" on every update: no page, no
+  frames. Not caused by this change.
+
 ---
 
 # Wave 1 record: M0 groundwork notes (2026-09-13)
