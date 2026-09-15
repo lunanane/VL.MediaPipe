@@ -17,3 +17,4 @@ bin/
 # local-only sample image for the help patch: provenance not cleared for
 # publishing (TEXTURE-INPUT-NOTES Q4) — replace before any upstream offer
 /help/hand_rgb_sample.jpg
+__pycache__/
