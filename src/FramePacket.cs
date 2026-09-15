@@ -25,6 +25,8 @@ public enum InputSource
 /// rows top-down.
 /// This assembly is imported without ImportAsIs, so there is no [ProcessNode] here: the per-sender state behind
 /// Pack lives in a weak table keyed by the owner object the patch passes in (its WebSocketServer).
+/// A frame tag (e.g. a camera frame id, MediaPipe's Input Frame Tag) does not travel in the packet: Pack records it per
+/// frame id, and the results and timers the page echoes that frame id with look it up (<see cref="TagOf"/>).
 /// </remarks>
 public static class FramePacket
 {
@@ -44,6 +46,10 @@ public static class FramePacket
     // IReadOnlyList<byte> element by element, so packets are exact-size arrays. At most one packet is in flight
     // (see Pack); cycling a few buffers adds a margin so a buffer is never rewritten while a send could read it.
     private const int PoolSize = 3;
+
+    // Frame tags of the most recent packets, indexed by frame id modulo the length (ids are consecutive process-wide):
+    // results arrive long before 256 newer packets have been built.
+    private const int TagHistory = 256;
 
     private sealed class Sender
     {
@@ -66,6 +72,10 @@ public static class FramePacket
     private static int s_echoIndex;
     private static readonly object s_echoLock = new();
 
+    private static readonly long[] s_taggedFrameIds = Enumerable.Repeat(-1L, TagHistory).ToArray();
+    private static readonly int[] s_frameTags = new int[TagHistory];
+    private static readonly object s_tagLock = new();
+
     internal static void Acknowledge(long frameId)
     {
         lock (s_echoLock)
@@ -83,6 +93,31 @@ public static class FramePacket
         }
     }
 
+    private static void RecordTag(long frameId, int frameTag)
+    {
+        int index = (int)(frameId % TagHistory);
+        lock (s_tagLock)
+        {
+            s_taggedFrameIds[index] = frameId;
+            s_frameTags[index] = frameTag;
+        }
+    }
+
+    /// <summary>
+    /// The frame tag Pack was given for the packet with this frame id; -1 when the packet had none, is unknown or is more
+    /// than 256 packets old.
+    /// </summary>
+    public static int TagOf(long frameId)
+    {
+        if (frameId < 0)
+            return -1;
+        int index = (int)(frameId % TagHistory);
+        lock (s_tagLock)
+        {
+            return s_taggedFrameIds[index] == frameId ? s_frameTags[index] : -1;
+        }
+    }
+
     /// <summary>Milliseconds on a monotonic clock (Stopwatch). Packet timestamps use it, and so does latency on receipt.</summary>
     public static double NowMs => Stopwatch.GetTimestamp() * (1000.0 / Stopwatch.Frequency);
 
@@ -93,7 +128,9 @@ public static class FramePacket
     /// </summary>
     /// <param name="owner">Identifies the sender whose state (buffers, in-flight packet) is used: the WebSocketServer.</param>
     /// <param name="image">The read-back image: R8G8B8A8 or B8G8R8A8 (R8G8B8X8 / B8G8R8X8 are sent with alpha 255).</param>
-    /// <param name="apply">Build a packet from image on this frame (TextureToImage's Result Available).</param>
+    /// <param name="frameTag">What image shows, e.g. a camera frame id (TaggedTextureReadback's Image Tag); -1 for none.
+    /// Results and timers of this packet report it as their FrameTag.</param>
+    /// <param name="apply">Build a packet from image on this frame (the readback's Result).</param>
     /// <param name="client">The WebSocket client the packet goes to; nothing is built while it is empty.</param>
     /// <param name="sendQueueLength">The WebSocketServer's Send Queue Length; nothing is built while a send is queued.</param>
     /// <param name="ackTimeout">Milliseconds after which an unacknowledged packet stops blocking the next one. A finished
@@ -102,7 +139,7 @@ public static class FramePacket
     /// <param name="packet">The packet, a byte[] of exactly HeaderSize + width * height * 4 bytes (empty when none was built).</param>
     /// <param name="frameId">Frame id of this sender's latest packet, -1 before the first. The page echoes it in every result.</param>
     /// <param name="droppedFrames">Frames skipped so far because the previous packet was still in flight.</param>
-    public static bool Pack(object? owner, IImage? image, bool apply, string? client, int sendQueueLength, float ackTimeout,
+    public static bool Pack(object? owner, IImage? image, int frameTag, bool apply, string? client, int sendQueueLength, float ackTimeout,
         out IReadOnlyList<byte> packet, out int frameId, out int droppedFrames)
     {
         packet = Array.Empty<byte>();
@@ -150,6 +187,8 @@ public static class FramePacket
         {
             return false;
         }
+        var tag = frameTag < 0 ? -1 : frameTag;
+        RecordTag(id, tag);
         sender.Pool[sender.PoolIndex] = buffer;
         sender.PoolIndex = (sender.PoolIndex + 1) % PoolSize;
         sender.InFlightFrameId = id;
@@ -157,6 +196,7 @@ public static class FramePacket
         sender.LastFrameId = id;
         frameId = unchecked((int)id);
         packet = buffer;
+        FrameTrace.Packet(id, tag, now);
         return true;
     }
 
@@ -224,7 +264,7 @@ public static class FramePacket
     }
 
     /// <summary>
-    /// The TextureToImage Size for a texture of textureSize: zero (native size) when maxInputSize is 0 or the texture
+    /// The readback Size for a texture of textureSize: zero (native size) when maxInputSize is 0 or the texture
     /// already fits, otherwise scaled down so its longer side is maxInputSize, keeping the aspect ratio.
     /// </summary>
     /// <remarks>An out parameter on purpose: vvvv's legacy import names the output of an Int2 -> Int2 method differently

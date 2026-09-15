@@ -293,6 +293,51 @@ Both vvvv scripts share `scripts\lib\MpCommon.ps1`:
 - They kill only the process tree they started, by PID.
 - They wait until every process of that tree has exited (CEF helpers included) before deleting the lock.
 
+## W9. Frame tags: which frame a result belongs to (2026-09-15, branch `feat/camera-frame-id`)
+
+**Why.** A patch that knows what its texture shows (a camera frame id) cannot pass that id next to the texture:
+TextureToImage returns a copy from 1 to 4 frames earlier (Stride `ImageReadback<T>`: newest finished older copy of a
+ring of 5 staging textures; the current copy only when none is ready, blocking; a copy can be returned twice). The id has
+to travel through the readback itself.
+
+**What changed (additive; no tag connected = the previous behaviour).**
+- `src/TaggedTextureReadback.cs`: TextureToImage's work in one class. ImageScaler (Linear) into an R8G8B8A8_UNorm render
+  target of the readback size, then the staging ring with the slot choice of Stride 4.2's `ImageReadback.DrawCore`
+  verbatim (`TaggedReadbackRing`, checked against a GPU model in FramePacketCheck) and one tag per slot.
+  `new TaggedTextureReadback(frameDelay)`; `Readback(texture, size, frameTag, out image, out imageTag)` returns the
+  previous draw's result; the object is the renderer RendererScheduler draws. Stride 4.2.0.2293 assemblies are
+  compile-time references through `PackageDownload` + HintPath, not PackageReference: a vvvvc export builds
+  `src\VL.MediaPipe.csproj` inside the exported solution, and Stride packages in its restore graph met the host's Stride
+  4.2.1 packages in the Stride asset compiler ("Cannot add the asset ... already in different package [Stride.Graphics]").
+- `VL.MediaPipe.vl` (generated, `scripts/vl/patch_mediapipe_vl.py`, base `bd17c52` + the VL.CEF 0.7.2 pin): pin
+  **Input Frame Tag** (Integer32, default -1) after Input Texture; in the texture If region TextureToImage is replaced by
+  Frame Delay 5 → Cache { TaggedTextureReadback Create (Frame Delay) } → Readback → RendererScheduler, as VL.Stride's
+  ReadBackTexture creates its ImageReadback. The Cache needs that input: `CacheManager.InputsChanged` is always false for
+  a Cache without inputs, so its body never ran and Readback was called on null (NullReferenceException every frame in
+  the first build of this change). Readback's Image Tag goes to Pack's new **Frame Tag** input. **Timings** gains
+  **Frame Tag**.
+- `src/FramePacket.cs`: `Pack(owner, image, frameTag, ...)` keeps packet id → tag for the last 256 packets; `TagOf(id)`.
+  The TDPF wire format (v1) and the page are unchanged: the page already echoes the packet id in every results object
+  and in timers.
+- `src/FrameMetadata.cs`: the 9 result classes and Timers get `FrameTag` (JsonIgnore), resolved in
+  `IJsonOnDeserialized` from `FrameId`; `Timers.GetFrameInfo(out frameId, out frameLatency, out frameTag)`.
+- `src/FrameTrace.cs`: `FrameTrace.Listener` (`IFrameTraceListener`) receives every packet built and every results /
+  timers message deserialized (kind, packet id, tag, time on `FramePacket.NowMs`, detection count), empty results
+  included. Listener exceptions are counted, never thrown into the texture path.
+- `help/HowTo Track hands on a texture.vl`: Input Frame Tag 42 → Timings Frame Tag.
+
+**Checks.** FramePacketCheck: tag table, FrameTag on timers/handResults (tagged, untagged, camera mode), trace listener
+(including a throwing one), and the staging ring against a GPU model (20 000 frames, copies finishing 0..6 frames late):
+every result carries its slot's tag, the chosen slot is Stride's choice, non-blocking delays 1..4 frames.
+In vvvv: `tools/sensor-topology-eval/vvvv/TagCheck.vl` (Kinect v2 frame with hands vs empty frames by a hashed pattern,
+frame number as tag: hands only on hand frames) and `ClockProbe.vl` on the Femto (plan M3; numbers in
+`.docs/DEVELOPMENT_PLAN_HISTORY.md`).
+
+**Environment notes.** `scripts\vvvvc-gate.ps1` now exports to `%TEMP%\mp-vvvvc` (`MP_VVVVC_EXPORT_ROOT`);
+`scripts\test-texture-input.ps1` passes the page test files explicitly (Node < 21 does not expand `--test` globs).
+Under Node 20.15 the timing-sensitive page test "frame pump: detection never overlaps" fails; the page code is unchanged
+by this work (the portable Node 24 the notes use is not installed on this PC).
+
 ---
 
 # Wave 1 record: M0 groundwork notes (2026-09-13)

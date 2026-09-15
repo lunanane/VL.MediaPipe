@@ -121,7 +121,10 @@ try {
     Write-Host "lock     : acquired $lock"
     foreach ($rel in $relative) {
         $base = [System.IO.Path]::GetFileNameWithoutExtension($rel) -replace '[^A-Za-z0-9._-]', '_'
-        $outDir = Join-Path $root "results\vvvvc\$base"
+        # Exports outside the workspace (an exported .csproj under the repo makes IDE tooling hold obj\ handles that
+        # break vvvv's package scan); MP_VVVVC_EXPORT_ROOT overrides.
+        $exportRoot = if ($env:MP_VVVVC_EXPORT_ROOT) { $env:MP_VVVVC_EXPORT_ROOT } else { Join-Path ([System.IO.Path]::GetTempPath()) 'mp-vvvvc' }
+        $outDir = Join-Path $exportRoot $base
         $stdout = Join-Path $gateDir "vvvvc-$base.out.txt"
         $stderr = Join-Path $gateDir "vvvvc-$base.err.txt"
         # The package document itself opens by its real path: through the junction vvvvc takes it for the

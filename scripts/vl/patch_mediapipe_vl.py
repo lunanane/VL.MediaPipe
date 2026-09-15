@@ -1,11 +1,11 @@
 """Applies the texture-input changes to VL.MediaPipe.vl.
 
-Starts from the upstream document in git (default: HEAD, i.e. the fork point before any texture-input edit of
-the .vl), inserts XML snippets at anchors that must each match exactly once, and writes VL.MediaPipe.vl with CRLF
-line endings like the committed file. Ids of new elements are derived from their names (sha256 -> 22 base62
+Starts from the upstream document in git (default: bd17c52, the fork point before any texture-input edit of the
+.vl), inserts XML snippets at anchors that must each match exactly once, and writes VL.MediaPipe.vl with CRLF line
+endings like the committed file. Ids of new elements are derived from their names (sha256 -> 22 base62
 characters), so re-running produces a byte-identical document.
 
-    python scripts/vl/patch_mediapipe_vl.py [--base HEAD] [--check]
+    python scripts/vl/patch_mediapipe_vl.py [--base bd17c52] [--check]
 
 --check exits 1 if the working-tree VL.MediaPipe.vl differs from what the script would write.
 
@@ -23,6 +23,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 DOC = REPO / "VL.MediaPipe.vl"
+UPSTREAM_BASE = "bd17c52"
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 
@@ -53,6 +54,11 @@ UPDATE_PINS = r'''
                 <Choice Kind="TypeFlag" Name="Texture" />
               </p:TypeAnnotation>
             </Pin>
+            <Pin Id="@ID(pin-tag)" Name="Input Frame Tag" Kind="InputPin" DefaultValue="-1" Summary="Source = Texture: what Input Texture shows in this frame, e.g. a camera frame id. The results and timings computed from that frame report it as their Frame Tag. The readback sends a frame 1 to 4 frames later, so this tag, not a value read next to the results, tells which frame they belong to. -1: no tag.">
+              <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+                <Choice Kind="TypeFlag" Name="Integer32" />
+              </p:TypeAnnotation>
+            </Pin>
             <Pin Id="@ID(pin-maxsize)" Name="Max Input Size" Kind="InputPin" DefaultValue="0" Summary="Source = Texture: 0 sends the texture at its own size. Otherwise it is scaled down on the GPU before readback so that its longer side is at most this many pixels.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Integer32" />
@@ -63,6 +69,7 @@ UPDATE_PINS = r'''
 CANVAS = r'''
             <ControlPoint Id="@ID(cp-source)" Bounds="2010,110" />
             <ControlPoint Id="@ID(cp-texture)" Bounds="2230,110" />
+            <ControlPoint Id="@ID(cp-tag)" Bounds="2340,110" />
             <ControlPoint Id="@ID(cp-maxsize)" Bounds="2450,110" />
             <Node Bounds="2008,160,70,19" Id="@ID(n-pagesource)">
               <p:NodeReference LastCategoryFullName="MediaPipe.FramePacket" LastDependency="VL.MediaPipe.dll">
@@ -96,7 +103,7 @@ CANVAS = r'''
               <Pin Id="@ID(istexture-texture)" Name="Texture" Kind="InputPin" />
               <Pin Id="@ID(istexture-result)" Name="Result" Kind="OutputPin" />
             </Node>
-            <Node Bounds="2200,210,600,400" Id="@ID(region-if)">
+            <Node Bounds="2200,210,640,420" Id="@ID(region-if)">
               <p:NodeReference LastCategoryFullName="Primitive" LastDependency="Builtin">
                 <Choice Kind="StatefulRegion" Name="Region (Stateful)" Fixed="true" />
                 <CategoryReference Kind="Category" Name="Primitive" />
@@ -126,18 +133,65 @@ CANVAS = r'''
                   <Pin Id="@ID(rs-texturesize)" Name="Texture Size" Kind="InputPin" />
                   <Pin Id="@ID(rs-result)" Name="Size" Kind="OutputPin" />
                 </Node>
-                <Node Bounds="2228,350,105,19" Id="@ID(n-t2i)">
-                  <p:NodeReference LastCategoryFullName="Stride.Textures" LastDependency="VL.Stride.Rendering.vl">
-                    <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
-                    <Choice Kind="ProcessAppFlag" Name="TextureToImage" />
+                <Pad Id="@ID(pad-framedelay)" Comment="Frame Delay" Bounds="2602,225,35,15" ShowValueBox="true" isIOBox="true" Value="5">
+                  <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+                    <Choice Kind="TypeFlag" Name="Integer32" />
+                  </p:TypeAnnotation>
+                </Pad>
+                <Node Bounds="2600,250,140,60" Id="@ID(region-cache)">
+                  <p:NodeReference LastCategoryFullName="Primitive" LastDependency="Builtin">
+                    <Choice Kind="StatefulRegion" Name="Region (Stateful)" Fixed="true" />
+                    <Choice Kind="ProcessStatefulRegion" Name="Cache" />
+                    <CategoryReference Kind="Category" Name="Primitive" />
                   </p:NodeReference>
-                  <Pin Id="@ID(t2i-input)" Name="Input" Kind="InputPin" />
-                  <Pin Id="@ID(t2i-size)" Name="Size" Kind="InputPin" />
-                  <Pin Id="@ID(t2i-newformat)" Name="New Format" Kind="InputPin" DefaultValue="R8G8B8A8_UNorm" />
-                  <Pin Id="@ID(t2i-output)" Name="Output" Kind="OutputPin" />
-                  <Pin Id="@ID(t2i-available)" Name="Result Available" Kind="OutputPin" />
+                  <ControlPoint Id="@ID(cache-cp-framedelay)" Bounds="2614,256" Alignment="Top" />
+                  <ControlPoint Id="@ID(cache-cp-readback)" Bounds="2614,304" Alignment="Bottom" />
+                  <Pin Id="@ID(cache-force)" Name="Force" Kind="InputPin" />
+                  <Pin Id="@ID(cache-dispose)" Name="Dispose Cached Outputs" Kind="InputPin" DefaultValue="True">
+                    <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+                      <Choice Kind="TypeFlag" Name="Boolean" />
+                    </p:TypeAnnotation>
+                  </Pin>
+                  <Pin Id="@ID(cache-changed)" Name="Has Changed" Kind="OutputPin" />
+                  <Patch Id="@ID(cache-patch)" ManuallySortedPins="true">
+                    <Patch Id="@ID(cache-create)" Name="Create" ManuallySortedPins="true" />
+                    <Patch Id="@ID(cache-then)" Name="Then" ManuallySortedPins="true" />
+                    <Node Bounds="2612,270,120,19" Id="@ID(n-readback-create)">
+                      <p:NodeReference LastCategoryFullName="MediaPipe.TaggedTextureReadback" LastDependency="VL.MediaPipe.dll">
+                        <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                        <CategoryReference Kind="AssemblyCategory" Name="TaggedTextureReadback" />
+                        <Choice Kind="OperationCallFlag" Name="Create" />
+                      </p:NodeReference>
+                      <Pin Id="@ID(readback-create-framedelay)" Name="Frame Delay" Kind="InputPin" />
+                      <Pin Id="@ID(readback-create-output)" Name="Output" Kind="StateOutputPin" />
+                    </Node>
+                  </Patch>
                 </Node>
-                <Node Bounds="2468,350,80,19" Id="@ID(n-firstclient)">
+                <Node Bounds="2228,350,300,19" Id="@ID(n-readback)">
+                  <p:NodeReference LastCategoryFullName="MediaPipe.TaggedTextureReadback" LastDependency="VL.MediaPipe.dll">
+                    <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                    <CategoryReference Kind="AssemblyCategory" Name="TaggedTextureReadback" NeedsToBeDirectParent="true" />
+                    <Choice Kind="OperationCallFlag" Name="Readback" />
+                  </p:NodeReference>
+                  <Pin Id="@ID(readback-input)" Name="Input" Kind="StateInputPin" />
+                  <Pin Id="@ID(readback-texture)" Name="Texture" Kind="InputPin" />
+                  <Pin Id="@ID(readback-size)" Name="Size" Kind="InputPin" />
+                  <Pin Id="@ID(readback-frametag)" Name="Frame Tag" Kind="InputPin" />
+                  <Pin Id="@ID(readback-output)" Name="Output" Kind="StateOutputPin" />
+                  <Pin Id="@ID(readback-result)" Name="Result" Kind="OutputPin" />
+                  <Pin Id="@ID(readback-image)" Name="Image" Kind="OutputPin" />
+                  <Pin Id="@ID(readback-imagetag)" Name="Image Tag" Kind="OutputPin" />
+                </Node>
+                <Node Bounds="2600,390,101,19" Id="@ID(n-scheduler)">
+                  <p:NodeReference LastCategoryFullName="Stride.Utils" LastDependency="VL.Stride.Games.vl">
+                    <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                    <Choice Kind="ProcessAppFlag" Name="RendererScheduler" />
+                  </p:NodeReference>
+                  <Pin Id="@ID(scheduler-ctx)" Name="Node Context" Kind="InputPin" IsHidden="true" />
+                  <Pin Id="@ID(scheduler-renderer)" Name="Renderer" Kind="InputPin" />
+                  <Pin Id="@ID(scheduler-output)" Name="Output" Kind="OutputPin" />
+                </Node>
+                <Node Bounds="2468,420,80,19" Id="@ID(n-firstclient)">
                   <p:NodeReference LastCategoryFullName="Collections.Sequence" LastDependency="VL.CoreLib.vl">
                     <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
                     <Choice Kind="OperationCallFlag" Name="FirstOrDefault" />
@@ -147,13 +201,14 @@ CANVAS = r'''
                   <Pin Id="@ID(first-output)" Name="Output" Kind="StateOutputPin" />
                   <Pin Id="@ID(first-result)" Name="Result" Kind="OutputPin" />
                 </Node>
-                <Node Bounds="2228,420,360,19" Id="@ID(n-pack)">
+                <Node Bounds="2228,460,360,19" Id="@ID(n-pack)">
                   <p:NodeReference LastCategoryFullName="MediaPipe.FramePacket" LastDependency="VL.MediaPipe.dll">
                     <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
                     <Choice Kind="OperationCallFlag" Name="Pack" />
                   </p:NodeReference>
                   <Pin Id="@ID(pack-owner)" Name="Owner" Kind="InputPin" />
                   <Pin Id="@ID(pack-image)" Name="Image" Kind="InputPin" />
+                  <Pin Id="@ID(pack-frametag)" Name="Frame Tag" Kind="InputPin" />
                   <Pin Id="@ID(pack-apply)" Name="Apply" Kind="InputPin" />
                   <Pin Id="@ID(pack-client)" Name="Client" Kind="InputPin" />
                   <Pin Id="@ID(pack-queue)" Name="Send Queue Length" Kind="InputPin" />
@@ -163,7 +218,7 @@ CANVAS = r'''
                   <Pin Id="@ID(pack-frameid)" Name="Frame Id" Kind="OutputPin" />
                   <Pin Id="@ID(pack-dropped)" Name="Dropped Frames" Kind="OutputPin" />
                 </Node>
-                <Node Bounds="2228,500,85,26" Id="@ID(n-senddata)">
+                <Node Bounds="2228,540,85,26" Id="@ID(n-senddata)">
                   <p:NodeReference LastCategoryFullName="IO.WebSocket.WebSocketServer" LastDependency="VL.IO.WebSocket.vl">
                     <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
                     <CategoryReference Kind="ClassType" Name="WebSocketServer" NeedsToBeDirectParent="true" />
@@ -191,6 +246,7 @@ WS_QUEUE = "VmNNQHk7ureOZgb1L3S5ka"             # WebSocketServer.Send Queue Len
 LINKS = rf'''
           <Link Id="@ID(l-io-source)" Ids="@ID(pin-source),@ID(cp-source)" IsHidden="true" />
           <Link Id="@ID(l-io-texture)" Ids="@ID(pin-texture),@ID(cp-texture)" IsHidden="true" />
+          <Link Id="@ID(l-io-tag)" Ids="@ID(pin-tag),@ID(cp-tag)" IsHidden="true" />
           <Link Id="@ID(l-io-maxsize)" Ids="@ID(pin-maxsize),@ID(cp-maxsize)" IsHidden="true" />
           <Link Id="@ID(l-source-page)" Ids="@ID(cp-source),@ID(pagesource-source)" />
           <Link Id="@ID(l-page-ss)" Ids="@ID(pagesource-result),@ID(ss-value)" />
@@ -202,10 +258,17 @@ LINKS = rf'''
           <Link Id="@ID(l-texture-info)" Ids="@ID(cp-texture),@ID(info-input)" />
           <Link Id="@ID(l-info-size)" Ids="@ID(info-viewsize),@ID(rs-texturesize)" />
           <Link Id="@ID(l-max-size)" Ids="@ID(cp-maxsize),@ID(rs-maxsize)" />
-          <Link Id="@ID(l-size-t2i)" Ids="@ID(rs-result),@ID(t2i-size)" />
-          <Link Id="@ID(l-texture-t2i)" Ids="@ID(cp-texture),@ID(t2i-input)" />
-          <Link Id="@ID(l-t2i-image)" Ids="@ID(t2i-output),@ID(pack-image)" />
-          <Link Id="@ID(l-t2i-apply)" Ids="@ID(t2i-available),@ID(pack-apply)" />
+          <Link Id="@ID(l-framedelay-cache)" Ids="@ID(pad-framedelay),@ID(cache-cp-framedelay)" />
+          <Link Id="@ID(l-framedelay-create)" Ids="@ID(cache-cp-framedelay),@ID(readback-create-framedelay)" />
+          <Link Id="@ID(l-readback-create)" Ids="@ID(readback-create-output),@ID(cache-cp-readback)" />
+          <Link Id="@ID(l-readback-state)" Ids="@ID(cache-cp-readback),@ID(readback-input)" />
+          <Link Id="@ID(l-texture-readback)" Ids="@ID(cp-texture),@ID(readback-texture)" />
+          <Link Id="@ID(l-size-readback)" Ids="@ID(rs-result),@ID(readback-size)" />
+          <Link Id="@ID(l-tag-readback)" Ids="@ID(cp-tag),@ID(readback-frametag)" />
+          <Link Id="@ID(l-readback-scheduler)" Ids="@ID(readback-output),@ID(scheduler-renderer)" />
+          <Link Id="@ID(l-readback-image)" Ids="@ID(readback-image),@ID(pack-image)" />
+          <Link Id="@ID(l-readback-apply)" Ids="@ID(readback-result),@ID(pack-apply)" />
+          <Link Id="@ID(l-readback-tag)" Ids="@ID(readback-imagetag),@ID(pack-frametag)" />
           <Link Id="@ID(l-clients-first)" Ids="{WS_CLIENTS},@ID(first-input)" />
           <Link Id="@ID(l-first-pack)" Ids="@ID(first-result),@ID(pack-client)" />
           <Link Id="@ID(l-first-send)" Ids="@ID(first-result),@ID(send-client)" />
@@ -218,8 +281,12 @@ LINKS = rf'''
 DEPENDENCY = r'''
   <NugetDependency Id="@ID(dep-stride)" Location="VL.Stride" Version="2025.7.1" />'''
 
+# The liminal-room pin (57e800f): VL.CEF 0.7.2, the version vvvv 7.2 and 7.5 ship.
+CEF_UPSTREAM = '<NugetDependency Id="G3a6CNjID7kOWzilC83hEQ" Location="VL.CEF" Version="0.8.2" />'
+CEF_LIMINAL = '<NugetDependency Id="G3a6CNjID7kOWzilC83hEQ" Location="VL.CEF" Version="0.7.2" />'
+
 # ---------------------------------------------------------------------------------------------------------------
-# Timings: Frame Id and Frame Latency (ms), following the pattern of its three existing outputs
+# Timings: Frame Id, Frame Latency (ms) and Frame Tag, following the pattern of its three existing outputs
 # (property node inside Try -> Try border -> If border with feedback -> canvas ControlPoint -> IO pin).
 TIMINGS_NODE = r'''
                     <Node Bounds="585,370,80,26" Id="@ID(t-getframeinfo)">
@@ -230,21 +297,26 @@ TIMINGS_NODE = r'''
                       <Pin Id="@ID(t-gfi-input)" Name="Input" Kind="StateInputPin" />
                       <Pin Id="@ID(t-gfi-frameid)" Name="Frame Id" Kind="OutputPin" />
                       <Pin Id="@ID(t-gfi-latency)" Name="Frame Latency" Kind="OutputPin" />
+                      <Pin Id="@ID(t-gfi-tag)" Name="Frame Tag" Kind="OutputPin" />
                     </Node>'''
 
 TIMINGS_TRY_CPS = r'''
                   <ControlPoint Id="@ID(t-try-cp-id)" Bounds="590,411" Alignment="Bottom" />
-                  <ControlPoint Id="@ID(t-try-cp-lat)" Bounds="650,411" Alignment="Bottom" />'''
+                  <ControlPoint Id="@ID(t-try-cp-lat)" Bounds="650,411" Alignment="Bottom" />
+                  <ControlPoint Id="@ID(t-try-cp-tag)" Bounds="710,411" Alignment="Bottom" />'''
 
 TIMINGS_IF_CPS = r'''
               <ControlPoint Id="@ID(t-if-bottom-id)" Bounds="590,485" Alignment="Bottom" />
               <ControlPoint Id="@ID(t-if-top-id)" Bounds="610,244" Alignment="Top" />
               <ControlPoint Id="@ID(t-if-bottom-lat)" Bounds="650,485" Alignment="Bottom" />
-              <ControlPoint Id="@ID(t-if-top-lat)" Bounds="670,244" Alignment="Top" />'''
+              <ControlPoint Id="@ID(t-if-top-lat)" Bounds="670,244" Alignment="Top" />
+              <ControlPoint Id="@ID(t-if-bottom-tag)" Bounds="710,485" Alignment="Bottom" />
+              <ControlPoint Id="@ID(t-if-top-tag)" Bounds="730,244" Alignment="Top" />'''
 
 TIMINGS_CANVAS_CPS = r'''
             <ControlPoint Id="@ID(t-cp-id)" Bounds="590,525" />
-            <ControlPoint Id="@ID(t-cp-lat)" Bounds="650,525" />'''
+            <ControlPoint Id="@ID(t-cp-lat)" Bounds="650,525" />
+            <ControlPoint Id="@ID(t-cp-tag)" Bounds="710,525" />'''
 
 TIMINGS_PINS = r'''
             <Pin Id="@ID(t-pin-frameid)" Name="Frame Id" Kind="OutputPin" Bounds="706,657" Summary="Source = Texture: the frame these timings belong to. -1 for camera input.">
@@ -255,6 +327,11 @@ TIMINGS_PINS = r'''
             <Pin Id="@ID(t-pin-latency)" Name="Frame Latency (ms)" Kind="OutputPin" Bounds="806,657" Summary="Source = Texture: milliseconds from sending the frame to receiving its timings, on the vvvv clock. Includes Detection Time; excludes the texture readback before sending. -1 for camera input.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Float32" />
+              </p:TypeAnnotation>
+            </Pin>
+            <Pin Id="@ID(t-pin-tag)" Name="Frame Tag" Kind="OutputPin" Bounds="906,657" Summary="Source = Texture: the MediaPipe node's Input Frame Tag of the frame these timings belong to, e.g. its camera frame id. -1 for camera input or without a tag.">
+              <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+                <Choice Kind="TypeFlag" Name="Integer32" />
               </p:TypeAnnotation>
             </Pin>'''
 
@@ -271,7 +348,12 @@ TIMINGS_LINKS = rf'''
           <Link Id="@ID(t-l-lat-if)" Ids="@ID(t-try-cp-lat),@ID(t-if-bottom-lat)" />
           <Link Id="@ID(t-l-lat-fb)" Ids="@ID(t-if-top-lat),@ID(t-if-bottom-lat)" IsFeedback="true" />
           <Link Id="@ID(t-l-lat-cp)" Ids="@ID(t-if-bottom-lat),@ID(t-cp-lat)" />
-          <Link Id="@ID(t-l-lat-io)" Ids="@ID(t-cp-lat),@ID(t-pin-latency)" IsHidden="true" />'''
+          <Link Id="@ID(t-l-lat-io)" Ids="@ID(t-cp-lat),@ID(t-pin-latency)" IsHidden="true" />
+          <Link Id="@ID(t-l-tag-try)" Ids="@ID(t-gfi-tag),@ID(t-try-cp-tag)" />
+          <Link Id="@ID(t-l-tag-if)" Ids="@ID(t-try-cp-tag),@ID(t-if-bottom-tag)" />
+          <Link Id="@ID(t-l-tag-fb)" Ids="@ID(t-if-top-tag),@ID(t-if-bottom-tag)" IsFeedback="true" />
+          <Link Id="@ID(t-l-tag-cp)" Ids="@ID(t-if-bottom-tag),@ID(t-cp-tag)" />
+          <Link Id="@ID(t-l-tag-io)" Ids="@ID(t-cp-tag),@ID(t-pin-tag)" IsHidden="true" />'''
 
 
 class Doc:
@@ -320,10 +402,11 @@ def build(base_text: str) -> str:
     doc.insert_after_line('<ControlPoint Id="FqPlIL7brwBP6nA0IFxJVq" Bounds="469,525" />', TIMINGS_CANVAS_CPS)
     doc.insert_after_block('<Pin Id="CdKBx5xwST6OM4Vs6LaWzY" Name="Source Frame Rate"', "</Pin>", TIMINGS_PINS)
     doc.insert_after_line('<Link Id="QdEpuHGCGDDPp2ZTkCEt7k" Ids="FFj96acS77kLWXmr2YPXMr,QVfeJv9HdgXL0Mn5dI0Awl" />', TIMINGS_LINKS)
-    doc.replace_once('<Node Bounds="192,238,387,253" Id="KfJeXH6k9EDL834Hvieacg">', '<Node Bounds="192,238,520,253" Id="KfJeXH6k9EDL834Hvieacg">')
-    doc.replace_once('<Node Bounds="250,331,317,86" Id="USXBRbjheeGOmxCeQ5Q101">', '<Node Bounds="250,331,450,86" Id="USXBRbjheeGOmxCeQ5Q101">')
+    doc.replace_once('<Node Bounds="192,238,387,253" Id="KfJeXH6k9EDL834Hvieacg">', '<Node Bounds="192,238,580,253" Id="KfJeXH6k9EDL834Hvieacg">')
+    doc.replace_once('<Node Bounds="250,331,317,86" Id="USXBRbjheeGOmxCeQ5Q101">', '<Node Bounds="250,331,510,86" Id="USXBRbjheeGOmxCeQ5Q101">')
     # Document
     doc.insert_after_line('<NugetDependency Id="NUSiv3FPG3gMWwRu79ffAI" Location="VL.IO.WebServer" Version="1.0.1" />', DEPENDENCY)
+    doc.replace_once(CEF_UPSTREAM, CEF_LIMINAL)
     return doc.text
 
 
@@ -350,7 +433,7 @@ def verify(text: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base", default="HEAD", help="git revision holding the upstream VL.MediaPipe.vl")
+    parser.add_argument("--base", default=UPSTREAM_BASE, help="git revision holding the upstream VL.MediaPipe.vl")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     base = subprocess.run(["git", "-C", str(REPO), "show", f"{args.base}:VL.MediaPipe.vl"], check=True, capture_output=True).stdout.decode("utf-8")

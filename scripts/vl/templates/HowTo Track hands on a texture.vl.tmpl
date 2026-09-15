@@ -82,6 +82,11 @@
               <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
             </p:ValueBoxSettings>
           </Pad>
+          <Pad Id="@ID(pad-tag)" Comment="Input Frame Tag" Bounds="162,255,40,15" ShowValueBox="true" isIOBox="true" Value="42">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="Integer32" />
+            </p:TypeAnnotation>
+          </Pad>
           <Pad Id="@ID(pad-enabled)" Comment="Enabled" Bounds="422,250,35,35" ShowValueBox="true" isIOBox="true" Value="True">
             <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
               <Choice Kind="ImmutableTypeFlag" Name="Boolean" />
@@ -101,6 +106,7 @@
             <Pin Id="@ID(mp-overlays)" Name="Show overlays" Kind="InputPin" DefaultValue="True" />
             <Pin Id="@ID(mp-source)" Name="Source" Kind="InputPin" />
             <Pin Id="@ID(mp-texture)" Name="Input Texture" Kind="InputPin" />
+            <Pin Id="@ID(mp-tag)" Name="Input Frame Tag" Kind="InputPin" />
             <Pin Id="@ID(mp-maxsize)" Name="Max Input Size" Kind="InputPin" />
             <Pin Id="@ID(mp-stateout)" Name="State Output" Kind="OutputPin" />
             <Pin Id="@ID(mp-output)" Name="Output" Kind="OutputPin" />
@@ -158,12 +164,14 @@
             <Pin Id="@ID(tm-rate)" Name="Source Frame Rate" Kind="OutputPin" />
             <Pin Id="@ID(tm-frameid)" Name="Frame Id" Kind="OutputPin" />
             <Pin Id="@ID(tm-latency)" Name="Frame Latency (ms)" Kind="OutputPin" />
+            <Pin Id="@ID(tm-tag)" Name="Frame Tag" Kind="OutputPin" />
           </Node>
           <Pad Id="@ID(pad-detect)" Comment="Detection Time" Bounds="372,590,40,15" ShowValueBox="true" isIOBox="true" />
           <Pad Id="@ID(pad-rate)" Comment="Source Frame Rate" Bounds="372,615,40,15" ShowValueBox="true" isIOBox="true" />
           <Pad Id="@ID(pad-frameid)" Comment="Frame Id" Bounds="372,640,60,15" ShowValueBox="true" isIOBox="true" />
           <Pad Id="@ID(pad-latency)" Comment="Frame Latency (ms)" Bounds="372,665,60,15" ShowValueBox="true" isIOBox="true" />
-          <Pad Id="@ID(pad-timings-note)" Bounds="450,585,420,100" ShowValueBox="true" isIOBox="true" Value="Every texture frame gets an id. The page echoes it back with its results, so Frame Id says which frame the current results belong to, and Frame Latency (ms) is the time from sending that frame to receiving its results, measured on vvvv's clock (it includes Detection Time). A new frame is only sent once the page has answered the previous one; frames in between are skipped, so latency does not pile up.">
+          <Pad Id="@ID(pad-frametag)" Comment="Frame Tag" Bounds="372,690,60,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="@ID(pad-timings-note)" Bounds="450,585,420,130" ShowValueBox="true" isIOBox="true" Value="Every texture frame gets an id. The page echoes it back with its results, so Frame Id says which frame the current results belong to, and Frame Latency (ms) is the time from sending that frame to receiving its results, measured on vvvv's clock (it includes Detection Time). A new frame is only sent once the page has answered the previous one; frames in between are skipped, so latency does not pile up. Input Frame Tag says what the texture shows in this frame (e.g. a camera frame id); the frame that is read back and sent keeps its tag, and its results report it as Frame Tag. The readback sends a frame from 1 to 4 frames earlier, so compare Frame Tag, not the current input, with the results.">
             <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
               <Choice Kind="TypeFlag" Name="String" />
             </p:TypeAnnotation>
@@ -184,6 +192,7 @@
         <Link Id="@ID(l-texture)" Ids="@ID(ft-texture),@ID(mp-texture)" />
         <Link Id="@ID(l-hands)" Ids="@ID(pad-hands),@ID(mp-hands)" />
         <Link Id="@ID(l-source)" Ids="@ID(pad-source),@ID(mp-source)" />
+        <Link Id="@ID(l-tag)" Ids="@ID(pad-tag),@ID(mp-tag)" />
         <Link Id="@ID(l-maxsize)" Ids="@ID(pad-maxsize),@ID(mp-maxsize)" />
         <Link Id="@ID(l-enabled)" Ids="@ID(pad-enabled),@ID(mp-enabled)" />
         <Link Id="@ID(l-browser)" Ids="@ID(mp-output),@ID(ts-browser)" />
@@ -195,6 +204,7 @@
         <Link Id="@ID(l-rate)" Ids="@ID(tm-rate),@ID(pad-rate)" />
         <Link Id="@ID(l-frameid)" Ids="@ID(tm-frameid),@ID(pad-frameid)" />
         <Link Id="@ID(l-latency)" Ids="@ID(tm-latency),@ID(pad-latency)" />
+        <Link Id="@ID(l-frametag)" Ids="@ID(tm-tag),@ID(pad-frametag)" />
       </Patch>
     </Node>
   </Patch>

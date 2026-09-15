@@ -82,6 +82,11 @@
               <p:stringtype p:Assembly="VL.Core" p:Type="VL.Core.StringType">Comment</p:stringtype>
             </p:ValueBoxSettings>
           </Pad>
+          <Pad Id="Cr7DxnR1TeAU6iVCdxYwSR" Comment="Input Frame Tag" Bounds="162,255,40,15" ShowValueBox="true" isIOBox="true" Value="42">
+            <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
+              <Choice Kind="TypeFlag" Name="Integer32" />
+            </p:TypeAnnotation>
+          </Pad>
           <Pad Id="PykEa4TyWo5VX7YgVgLjlR" Comment="Enabled" Bounds="422,250,35,35" ShowValueBox="true" isIOBox="true" Value="True">
             <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
               <Choice Kind="ImmutableTypeFlag" Name="Boolean" />
@@ -101,6 +106,7 @@
             <Pin Id="JxxAxm1nn2J987Q45zRGI9" Name="Show overlays" Kind="InputPin" DefaultValue="True" />
             <Pin Id="EwoobmP7FgeeIu39VCXOu9" Name="Source" Kind="InputPin" />
             <Pin Id="N3a7K6kIE7JXGRZfMiFGdg" Name="Input Texture" Kind="InputPin" />
+            <Pin Id="N1BVOwlzMfKpFOQam9zLmm" Name="Input Frame Tag" Kind="InputPin" />
             <Pin Id="KGWR7zAydFuORJvCj12a5H" Name="Max Input Size" Kind="InputPin" />
             <Pin Id="DSiDamBK8VRDCvrLhyq1Qn" Name="State Output" Kind="OutputPin" />
             <Pin Id="CPdM4CkxQoIG3GoNFraT9e" Name="Output" Kind="OutputPin" />
@@ -158,12 +164,14 @@
             <Pin Id="CCkMsP0qVShKD4dXPDBIjV" Name="Source Frame Rate" Kind="OutputPin" />
             <Pin Id="KV6TojjSRgcXIxH5qYg8cU" Name="Frame Id" Kind="OutputPin" />
             <Pin Id="U5fDenH1OqxJBqxty4Z34p" Name="Frame Latency (ms)" Kind="OutputPin" />
+            <Pin Id="F28AjZrVpqIQ96bNzh0GQ9" Name="Frame Tag" Kind="OutputPin" />
           </Node>
           <Pad Id="T5qzIVdACzs87UFINl6cNS" Comment="Detection Time" Bounds="372,590,40,15" ShowValueBox="true" isIOBox="true" />
           <Pad Id="BKv6AgEKqsPu5FlIrGAutE" Comment="Source Frame Rate" Bounds="372,615,40,15" ShowValueBox="true" isIOBox="true" />
           <Pad Id="O8G6QDdUuo7WV9EnBZKBhR" Comment="Frame Id" Bounds="372,640,60,15" ShowValueBox="true" isIOBox="true" />
           <Pad Id="SriEWfYAFqdcEoDAz4syth" Comment="Frame Latency (ms)" Bounds="372,665,60,15" ShowValueBox="true" isIOBox="true" />
-          <Pad Id="Kpt8nXxdVo6lLWb51ukZMA" Bounds="450,585,420,100" ShowValueBox="true" isIOBox="true" Value="Every texture frame gets an id. The page echoes it back with its results, so Frame Id says which frame the current results belong to, and Frame Latency (ms) is the time from sending that frame to receiving its results, measured on vvvv's clock (it includes Detection Time). A new frame is only sent once the page has answered the previous one; frames in between are skipped, so latency does not pile up.">
+          <Pad Id="EkJCnUjyEM5dMGZ9GqNVz7" Comment="Frame Tag" Bounds="372,690,60,15" ShowValueBox="true" isIOBox="true" />
+          <Pad Id="Kpt8nXxdVo6lLWb51ukZMA" Bounds="450,585,420,130" ShowValueBox="true" isIOBox="true" Value="Every texture frame gets an id. The page echoes it back with its results, so Frame Id says which frame the current results belong to, and Frame Latency (ms) is the time from sending that frame to receiving its results, measured on vvvv's clock (it includes Detection Time). A new frame is only sent once the page has answered the previous one; frames in between are skipped, so latency does not pile up. Input Frame Tag says what the texture shows in this frame (e.g. a camera frame id); the frame that is read back and sent keeps its tag, and its results report it as Frame Tag. The readback sends a frame from 1 to 4 frames earlier, so compare Frame Tag, not the current input, with the results.">
             <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
               <Choice Kind="TypeFlag" Name="String" />
             </p:TypeAnnotation>
@@ -184,6 +192,7 @@
         <Link Id="C0nP9vGCMog1i9dsXHqtAY" Ids="PuuwDNRFEjq3e7Rq8ddNd3,N3a7K6kIE7JXGRZfMiFGdg" />
         <Link Id="A9gDfRUAHYumwZZMSqsptT" Ids="WUo9YdjLNaEEGDBQS6ZI0h,Amnc9Nm7ms8o0Q20Yv3QVY" />
         <Link Id="VAAoch54mpnhfyjGIyO226" Ids="T6v5dYyk7LKObJe5kcdFtn,EwoobmP7FgeeIu39VCXOu9" />
+        <Link Id="M6HVrx3HKEdeNQRbA700VI" Ids="Cr7DxnR1TeAU6iVCdxYwSR,N1BVOwlzMfKpFOQam9zLmm" />
         <Link Id="XwxzV02DWgn5mfmCsrfrg6" Ids="GimYhozUU6USsOqSRab2Cp,KGWR7zAydFuORJvCj12a5H" />
         <Link Id="S4sakM7IobwDRglkKEPktl" Ids="PykEa4TyWo5VX7YgVgLjlR,HKrRh9makHl6WwyGDk7npD" />
         <Link Id="Ot1DH8u4vofGUeSB9JSZyQ" Ids="CPdM4CkxQoIG3GoNFraT9e,VGrT83td4QkPBg6kgcbEXx" />
@@ -195,6 +204,7 @@
         <Link Id="LDrKDb6xLQ5QYDs6MYmNUj" Ids="CCkMsP0qVShKD4dXPDBIjV,BKv6AgEKqsPu5FlIrGAutE" />
         <Link Id="UDpjNwnmtGFZP7J4Dyj4Sw" Ids="KV6TojjSRgcXIxH5qYg8cU,O8G6QDdUuo7WV9EnBZKBhR" />
         <Link Id="XSiuvQCZ2nH7vfE87f1Vqw" Ids="U5fDenH1OqxJBqxty4Z34p,SriEWfYAFqdcEoDAz4syth" />
+        <Link Id="KRazrr6O0vFSoNmph6tO7I" Ids="F28AjZrVpqIQ96bNzh0GQ9,EkJCnUjyEM5dMGZ9GqNVz7" />
       </Patch>
     </Node>
   </Patch>

@@ -10,7 +10,8 @@
     <OutputPath>..\bin\$(Configuration)\</OutputPath>
   </PropertyGroup>
 
-  <Target Name="CopyToLib" AfterTargets="Build">
+  <!-- -p:SkipCopyToLib=true compiles without touching lib\ (e.g. while a vvvv has the package loaded). -->
+  <Target Name="CopyToLib" AfterTargets="Build" Condition="'$(SkipCopyToLib)' != 'true'">
     <ItemGroup>
       <_LibFile Include="$(OutDir)$(AssemblyName).dll;$(OutDir)$(AssemblyName).pdb;$(OutDir)$(AssemblyName).xml;$(OutDir)$(AssemblyName).deps.json" />
     </ItemGroup>
@@ -19,6 +20,25 @@
 
   <ItemGroup>
     <PackageReference Include="VL.Core" Version="2024.6.6" />
+  </ItemGroup>
+
+  <!-- TaggedTextureReadback (texture input) draws with Stride. Compile-time only: VL.MediaPipe.vl depends on VL.Stride,
+       so vvvv provides Stride at runtime. 4.2.0.2293 is the Stride of the oldest 7.x VL.Stride (2025.7.0); newer hosts
+       ship newer 4.2 builds. Downloaded, not package-referenced: a vvvvc export builds this project inside the exported
+       solution, and Stride packages in its restore graph would meet the host's newer Stride packages in the Stride asset
+       compiler ("Cannot add the asset ... already in different package [Stride.Graphics]"). -->
+  <PropertyGroup>
+    <StrideCompileVersion>4.2.0.2293</StrideCompileVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageDownload Include="Stride;Stride.Core;Stride.Graphics;Stride.Rendering;Stride.Shaders" Version="[$(StrideCompileVersion)]" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Stride"><HintPath>$(NuGetPackageRoot)stride\$(StrideCompileVersion)\lib\net8.0\Stride.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride.Core"><HintPath>$(NuGetPackageRoot)stride.core\$(StrideCompileVersion)\lib\net8.0\Stride.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride.Graphics"><HintPath>$(NuGetPackageRoot)stride.graphics\$(StrideCompileVersion)\lib\net8.0\Stride.Graphics.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride.Rendering"><HintPath>$(NuGetPackageRoot)stride.rendering\$(StrideCompileVersion)\lib\net8.0\Stride.Rendering.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Stride.Shaders"><HintPath>$(NuGetPackageRoot)stride.shaders\$(StrideCompileVersion)\lib\net8.0\Stride.Shaders.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
   <ItemGroup>

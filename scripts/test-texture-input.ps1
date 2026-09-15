@@ -29,7 +29,9 @@ function Invoke-Step([string] $Name, [scriptblock] $Block) {
 }
 
 Push-Location (Join-Path $root 'mediapipe-touchdesigner')
-try { Invoke-Step 'page unit tests (node --test)' { & $node --test 'test/**/*.test.mjs' 2>&1 | ForEach-Object { "   $_" } | Write-Host } } finally { Pop-Location }
+# Explicit files: node --test expands glob patterns only from Node 21 on.
+$pageTests = @(Get-ChildItem -LiteralPath 'test' -Recurse -Filter '*.test.mjs' | ForEach-Object { $_.FullName })
+try { Invoke-Step 'page unit tests (node --test)' { & $node --test @pageTests 2>&1 | ForEach-Object { "   $_" } | Write-Host } } finally { Pop-Location }
 
 $checkDir = Join-Path $root 'results\framepacket-check'
 Invoke-Step 'build FramePacketCheck' { & dotnet build (Join-Path $root 'test\csharp\FramePacketCheck\FramePacketCheck.csproj') -c Release -nologo -v q 2>&1 | Select-Object -Last 3 | ForEach-Object { "   $_" } | Write-Host }
