@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Stride.Graphics;
 using Stride.Rendering;
@@ -9,6 +11,17 @@ using VLPixelFormat = VL.Lib.Basics.Imaging.PixelFormat;
 [assembly: InternalsVisibleTo("FramePacketCheck")]
 
 namespace MediaPipe;
+
+/// <summary>When the texture input's frame is read back and sent (MediaPipe's Readback Mode pin).</summary>
+public enum ReadbackMode
+{
+    /// <summary>The draw of frame f copies the texture; update f + 1 reads the copy and the patch packs and sends it:
+    /// one render frame (~16.7 ms at 60 Hz) between the texture and the send, no wait for the GPU in the draw.</summary>
+    NextUpdate,
+    /// <summary>The draw of frame f copies the texture, waits for the GPU to finish the copy (a blocking map) and sends
+    /// the packet right there: the frame leaves in the vvvv frame it was rendered in, at the cost of that wait.</summary>
+    SameFrame,
+}
 
 /// <summary>
 /// VL.Stride's TextureToImage with a tag per frame, read back as early as the GPU allows: the draw scales the texture into
@@ -25,6 +38,14 @@ namespace MediaPipe;
 /// copy (the image is one frame old); with more, the update only takes copies that are already finished and waits only for
 /// one that is Frame Delay frames old. Older unread copies are dropped when a newer one is read, so no copy is returned
 /// twice. A tagged texture is copied once per tag: while the tag does not change the draw copies nothing.</para>
+/// <para>With <see cref="ReadbackMode.SameFrame"/> (<see cref="Configure"/>, before Readback) the draw does the rest too:
+/// when FramePacket.Pack would send a frame now (a client, the previous packet acknowledged or timed out, a new tag) it
+/// copies the texture, waits for the GPU (blocking map), builds the packet and hands it to the WebSocketServer's
+/// SendAsync. Readback then returns no image, so the patch's Pack and SendData stay idle. This relies on the renderers
+/// that produce the texture being drawn before this one in the same frame, as they are when the texture's producer was
+/// updated (and so scheduled) before RendererScheduler scheduled this renderer. The environment variable
+/// MP_READBACK_MODE (NextUpdate / SameFrame) overrides the mode, for A/B measurements with unchanged patches;
+/// MP_READBACK_TRACE names a file that gets one JSON line per same-frame send (tag, wait, mean red of the pixels).</para>
 /// </remarks>
 public sealed class TaggedTextureReadback : IGraphicsRendererBase, IDisposable
 {
@@ -53,6 +74,20 @@ public sealed class TaggedTextureReadback : IGraphicsRendererBase, IDisposable
     private int _resultWidth;
     private int _resultHeight;
 
+    // Same-frame mode (Configure)
+    private static readonly ReadbackMode? s_modeOverride =
+        Enum.TryParse<ReadbackMode>(Environment.GetEnvironmentVariable("MP_READBACK_MODE"), ignoreCase: true, out var m) ? m : null;
+    private static readonly object s_traceLock = new();
+    private static StreamWriter? s_trace;
+    private static bool s_traceOpened;
+    private ReadbackMode _mode;
+    private object? _sender;
+    private string? _client;
+    private int _sendQueueLength;
+    private float _ackTimeout = 1000;
+    private Texture? _sameFrameStaging;
+    private Task<bool>? _sendTask;
+
     /// <summary>Creates the readback; GPU resources are created on the first draw.</summary>
     /// <param name="frameDelay">Frames a copy may lag before the update waits for the GPU (clamped to 1..16), also the number
     /// of staging textures. Create a new readback to change it (VL.MediaPipe.vl creates it in a Cache region with Frame
@@ -76,6 +111,16 @@ public sealed class TaggedTextureReadback : IGraphicsRendererBase, IDisposable
     public bool Readback(Texture? texture, Int2 size, int frameTag, out IImage? image, out int imageTag)
     {
         _updates++;
+        if (_mode == ReadbackMode.SameFrame)
+        {
+            // the draw sends; nothing for the patch's Pack
+            _input = texture;
+            _size = size;
+            _tag = frameTag < 0 ? -1 : frameTag;
+            image = null;
+            imageTag = -1;
+            return false;
+        }
         if (_ring is not null && _commandList is not null && _ring.Read(_readSlot, _updates, _frameDelay, out var tag, out var blocking))
         {
             _available = true;
@@ -99,6 +144,38 @@ public sealed class TaggedTextureReadback : IGraphicsRendererBase, IDisposable
     /// <summary>True when the last read had to wait for the GPU to finish the copy.</summary>
     public bool IsBlocking { get; private set; }
 
+    /// <summary>
+    /// Chooses when frames are read back and sent; call it in the update before <see cref="Readback"/>. With
+    /// <see cref="ReadbackMode.SameFrame"/> the draw packs (FramePacket.Pack's rules, acknowledgement included) and sends
+    /// through sender itself, and Readback returns no image.
+    /// </summary>
+    /// <param name="mode">NextUpdate (the patch packs and sends in the next update) or SameFrame. MP_READBACK_MODE overrides it.</param>
+    /// <param name="sender">The WebSocketServer (Pack's owner): its SendAsync (Advanced) sends the packets.</param>
+    /// <param name="client">The client the packets go to (as Pack's Client).</param>
+    /// <param name="sendQueueLength">The WebSocketServer's Send Queue Length (as Pack's).</param>
+    /// <param name="ackTimeout">As Pack's Ack Timeout, in milliseconds.</param>
+    /// <param name="activeMode">The mode in effect (after the environment override).</param>
+    /// <param name="waitMs">Milliseconds the last same-frame send waited for the GPU in the draw (the blocking map).</param>
+    /// <param name="problem">Why the last same-frame send failed, or empty.</param>
+    public void Configure(ReadbackMode mode, object? sender, string? client, int sendQueueLength, float ackTimeout,
+        out ReadbackMode activeMode, out float waitMs, out string problem)
+    {
+        _mode = s_modeOverride ?? mode;
+        _sender = sender;
+        _client = client;
+        _sendQueueLength = sendQueueLength;
+        _ackTimeout = ackTimeout;
+        activeMode = _mode;
+        waitMs = LastWaitMs;
+        problem = Problem;
+    }
+
+    /// <summary>Milliseconds the last same-frame send waited for the GPU in the draw.</summary>
+    public float LastWaitMs { get; private set; }
+
+    /// <summary>Why the last same-frame send failed, or empty.</summary>
+    public string Problem { get; private set; } = "";
+
     void IGraphicsRendererBase.Draw(RenderDrawContext context)
     {
         var input = _input;
@@ -109,7 +186,12 @@ public sealed class TaggedTextureReadback : IGraphicsRendererBase, IDisposable
         EnsureTarget(context.GraphicsDevice, width, height);
         _commandList = context.CommandList;
         if (_tag >= 0 && _tag == _stagedTag)
-            return; // this frame is already copied
+            return; // this frame is already copied (same-frame mode: already sent)
+        if (_mode == ReadbackMode.SameFrame)
+        {
+            DrawSameFrame(context, input);
+            return;
+        }
 
         _scaler ??= new ImageScaler(SamplingPattern.Linear);
         _scaler.SetInput(0, input);
@@ -117,6 +199,60 @@ public sealed class TaggedTextureReadback : IGraphicsRendererBase, IDisposable
         _scaler.Draw(context);
         context.CommandList.Copy(_target!, _staging[_ring!.Stage(_tag, _updates)]);
         _stagedTag = _tag;
+    }
+
+    private void DrawSameFrame(RenderDrawContext context, Texture input)
+    {
+        var sender = _sender;
+        if (sender is null || string.IsNullOrEmpty(_client))
+            return;
+        // A send still leaving the socket counts as a queued send, like the patch's Send Queue Length.
+        int queue = _sendQueueLength + (_sendTask is { IsCompleted: false } ? 1 : 0);
+        if (!FramePacket.CanSend(sender, _tag, _client, queue, _ackTimeout))
+            return; // nothing would be sent: no copy, no wait
+
+        _scaler ??= new ImageScaler(SamplingPattern.Linear);
+        _scaler.SetInput(0, input);
+        _scaler.SetOutput(_target!);
+        _scaler.Draw(context);
+        _sameFrameStaging ??= _target!.ToStaging();
+        context.CommandList.Copy(_target!, _sameFrameStaging);
+        long start = Stopwatch.GetTimestamp();
+        _sameFrameStaging.GetData(context.CommandList, _result, 0, 0, doNotWait: false);
+        LastWaitMs = (float)((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+        _stagedTag = _tag;
+
+        var image = _result.ToImage(_resultWidth, _resultHeight, VLPixelFormat.R8G8B8A8, nameof(StridePixelFormat.R8G8B8A8_UNorm), isVolatile: true);
+        if (!FramePacket.BuildChecked(sender, image, _tag, out var packet, out var frameId))
+            return;
+        _sendTask = WebSocketSend.Send(sender, _client!, (byte[])packet);
+        Problem = _sendTask is null ? WebSocketSend.Problem : "";
+        Trace(frameId);
+    }
+
+    private void Trace(int frameId)
+    {
+        lock (s_traceLock)
+        {
+            if (!s_traceOpened)
+            {
+                s_traceOpened = true;
+                var path = Environment.GetEnvironmentVariable("MP_READBACK_TRACE");
+                if (!string.IsNullOrEmpty(path))
+                {
+                    try { s_trace = new StreamWriter(path, append: true) { AutoFlush = true }; }
+                    catch (Exception e) when (e is IOException or UnauthorizedAccessException) { s_trace = null; }
+                }
+            }
+            if (s_trace is null)
+                return;
+            long sum = 0;
+            for (int i = 0; i < _result.Length; i += 4)
+                sum += _result[i];
+            double mean = _result.Length > 0 ? sum * 4.0 / _result.Length : 0;
+            s_trace.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"{{\"kind\": \"same_frame_send\", \"tag\": {_tag}, \"frame_id\": {frameId}, \"t_ms\": {FramePacket.NowMs:F3}, \"wait_ms\": {LastWaitMs:F3}, \"mean_r\": {mean:F3}, \"sent\": {(_sendTask is not null ? "true" : "false")}}}"));
+        }
     }
 
     private bool ReadSlot(int slot, bool doNotWait) =>
@@ -147,6 +283,8 @@ public sealed class TaggedTextureReadback : IGraphicsRendererBase, IDisposable
         foreach (var texture in _staging)
             texture.Dispose();
         _staging.Clear();
+        _sameFrameStaging?.Dispose();
+        _sameFrameStaging = null;
         _ring = null;
         _available = false;
         _resultTag = -1;

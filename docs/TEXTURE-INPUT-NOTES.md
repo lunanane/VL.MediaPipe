@@ -429,6 +429,66 @@ HandTrackingOscSender; other agents' pytest and S1/S2 runs interleaved):
   "Failed to initialize CEF runtime" followed by "Value cannot be null (Parameter 'ptr')" on every update: no page, no
   frames. Not caused by this change.
 
+## W12. Same-frame send: Readback Mode = SameFrame (2026-09-24, branch `feat/camera-frame-id`)
+
+**Why.** W11 left one render frame (~16 ms) between the prepass and the packet: the draw of frame f copies, update
+f + 1 reads and sends. The TODO's measured e2e (37.6 p50 / 45.2 p95 live) carries that frame as its largest stage.
+
+**Premise, checked first.** A blocking map in the draw only helps if the texture's producer (TextureFX chain) has
+recorded frame f's commands before this renderer draws. It has: a TextureFX is scheduled when its output is read in the
+update, and MediaPipe reads Input Texture before RendererScheduler schedules the readback, so the scheduler draws the
+producer first; on D3D11 the draw's command list is the immediate context, so the map flushes and waits. Evidence:
+TagCheck.vl (SyntheticDepthSource: hand frame or empty frame by a hash of the frame number, a new frame every vvvv frame)
+with `MP_READBACK_MODE=SameFrame` and `MP_READBACK_TRACE` (mean red of every image read in the draw, per tag):
+
+| Host | reads | mean red, hand-tagged frames | mean red, empty-tagged frames | empty frames right after a hand frame | readback delay | empty_detected / hand_missed |
+|---|---|---|---|---|---|---|
+| 8.0-0068 | 527 | 44.7-52.3 | 0.0 | 117, all 0.0 | 0 frames | 0 / 0 |
+| 7.2-0014 | 688 | 44.7-52.3 | 0.0 | 152, all 0.0 | 0 frames | 0 / 0 |
+
+A read of the previous frame's content would show a hand on those empty frames that follow a hand frame; none did.
+
+**What changed.**
+- `TaggedTextureReadback.Configure(mode, sender, client, sendQueueLength, ackTimeout, out activeMode, out waitMs,
+  out problem)`, called before Readback. `ReadbackMode.NextUpdate` (default) is W11 unchanged. `SameFrame`: Readback
+  returns no image (the patch's Pack / SendData stay idle); the draw asks `FramePacket.CanSend` (Pack's gate: client, new
+  tag, acknowledgement or Ack Timeout, empty queue; a refusal counts as dropped), and only then scales, copies into its
+  own staging texture, maps it blocking, builds the packet (`FramePacket.BuildChecked`, same ids / tags / FrameTrace as
+  Pack) and sends it through the WebSocketServer's SendAsync (Advanced) (`src/WebSocketSend.cs`, found by reflection on
+  the VL-emitted type; works on 7.2, compiled at load, and 8.0, precompiled). An unfinished send task counts as a
+  queued send. Tags flow as before: packet id -> tag, results / timers FrameTag.
+- `MP_READBACK_MODE` (NextUpdate / SameFrame) overrides the pin, for A/B runs with unchanged patches;
+  `MP_READBACK_TRACE=<file>` writes one JSON line per same-frame send (tag, frame id, wait_ms, mean_r).
+- `VL.MediaPipe.vl` (generated): MediaPipe pin **Readback Mode** (default NextUpdate) after Max Input Size; the texture
+  If region gets TaggedTextureReadback.Configure between the Cache and Readback (WebSocketServer, first client, Send
+  Queue Length).
+- `scripts/lib/MpCommon.ps1`: the superproject is the nearest parent with a `.gitmodules` (the fork now sits at
+  `tools/vvvv-node/VL.MediaPipe`, three levels down), so the scripts share `<repo>\.dev\vl\vvvv.lock` again.
+
+**Measurements** (`run_probe.ps1 -Replay sweep-loop-4x`, `HowTo Standalone Femto hand tracking (replay).vl`, 1,308 frames,
+mode by `MP_READBACK_MODE`; e2e = replay injection -> MediaPipeHandSource consume; ms p50 / p95 / p99):
+
+| Run | prepass -> send | send -> detect | detect -> consume | e2e | render fps (p99 interval) |
+|---|---|---|---|---|---|
+| 8.0 NextUpdate a | 16.0 / 16.3 / 19.0 | 13.7 / 23.6 / 33.6 | 4.3 / 16.3 / 16.9 | 33.8 / 51.0 / 67.7 | 59.95 (16.90) |
+| 8.0 SameFrame a | 1.0 / 1.7 / 7.3 | 14.3 / 22.1 / 32.1 | 2.9 / 16.1 / 16.7 | **17.2 / 34.2 / 67.0** | 59.94 (16.96) |
+| 8.0 SameFrame b | 1.0 / 1.6 / 5.2 | 14.3 / 23.1 / 28.4 | 3.0 / 16.1 / 16.7 | **17.3 / 34.2 / 51.0** | 59.95 (16.92) |
+| 8.0 NextUpdate b | 15.9 / 16.2 / 18.2 | 14.6 / 22.7 / 29.9 | 4.1 / 16.2 / 16.9 | 33.9 / 51.1 / 65.9 | 59.97 (16.88) |
+| 7.2 NextUpdate | 15.8 / 16.1 / 16.9 | 14.5 / 24.0 / 31.6 | 4.2 / 16.3 / 16.9 | 33.9 / 51.1 / 67.3 | 59.98 (16.88) |
+| 7.2 SameFrame | 1.1 / 1.8 / 13.4 | 12.1 / 21.0 / 38.8 | 4.8 / 15.4 / 16.5 | **17.0 / 33.9 / 50.5** | 59.96 (16.96) |
+
+- 7.2 SameFrame sent 1,272 of 1,301 injected frames: the 29 unsent all fall in the first 2.3 s (page warm-up, as in
+  W11); every other run sent all but one. (Its first attempt died on a VL.HandTracking rebuilt mid-session by another
+  lane: "Unable to cast UInt32 to VL.TrackingDepthPrepass.Background"; unrelated to this change.)
+- **The wait in the draw** (blocking map, MP_READBACK_TRACE): 8.0 p50 0.97 / p95 1.5-1.6 / p99 4.7-5.1 / max 21-23 ms, 7.2 p50 1.06 / p95 1.71 / p99 4.68 / max 24.9 ms per
+  sent frame (TagCheck: p50 0.95-0.98, p95 1.3-1.4). Only frames that are sent wait; vvvv held 59.9 fps in every run.
+- **Why e2e moves by whole frames.** Results are consumed in a vvvv update. The packet now leaves ~2 ms into frame f
+  instead of ~0.4 ms into f + 1; detection takes ~14 ms, so about half the frames are consumed in update f + 1 (e2e
+  ~17) and the rest in f + 2 (~34): p50 drops a full frame, p95 stays at the old p50. Anything that makes detection
+  slower (a short run: `-Replay sweep`, 327 frames, 8.0: send -> detect 20.3 p50, e2e 34.4 / 51.9 unchanged) loses the
+  gain; faster detection turns more frames into f + 1 consumes.
+- Live Femto and the TODO's capture -> consume number were not re-measured (camera left to other lanes).
+
 ---
 
 # Wave 1 record: M0 groundwork notes (2026-09-13)

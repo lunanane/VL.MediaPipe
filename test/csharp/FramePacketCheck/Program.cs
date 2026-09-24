@@ -135,6 +135,22 @@ var sentUntagged = Pack(repeatOwner, true, "c", 0, 1000, out _, out var untagged
 Echo(untaggedA);
 Check(sentUntagged && Pack(repeatOwner, true, "c", 0, 1000, out _, out var untaggedB, out _) && untaggedB > untaggedA,
     "Pack: untagged images are sent on every acknowledged frame, as before");
+// Same-frame readback: CanSend is Pack's gate without an image, BuildChecked builds what Pack would.
+var sameOwner = new object();
+Check(!FramePacket.CanSend(sameOwner, 7, "", 0, 1000), "CanSend: nothing without a client");
+var sameGate = FramePacket.CanSend(sameOwner, 7, "c", 0, 1000);
+var sameBuilt = FramePacket.BuildChecked(sameOwner, frame, 7, out var samePacket, out var sameId);
+Check(sameGate && sameBuilt && samePacket.Count == FramePacket.HeaderSize + 8 * 4 * 4 && FramePacket.TagOf(sameId) == 7, "CanSend + BuildChecked: tagged frame 7 is built as Pack builds it");
+Check(!FramePacket.CanSend(sameOwner, 8, "c", 0, 1000) && FramePacket.DroppedFramesOf(sameOwner) == 1, "CanSend: no while the packet is unacknowledged (counted as dropped)");
+Echo(sameId);
+Check(!FramePacket.CanSend(sameOwner, 7, "c", 0, 1000), "CanSend: a frame tag already sent is refused");
+Check(!FramePacket.CanSend(sameOwner, 8, "c", 1, 1000), "CanSend: no while a send is queued");
+Check(FramePacket.CanSend(sameOwner, 8, "c", 0, 1000), "CanSend: the next tag once acknowledged and the queue is empty");
+var fakeServer = new FakeWebSocketServer();
+var sendTask = WebSocketSend.Send(fakeServer, "c", (byte[])samePacket);
+Check(sendTask is not null && sendTask.Result && fakeServer.Client == "c" && ReferenceEquals(fakeServer.Data, samePacket)
+    && fakeServer.Type == System.Net.WebSockets.WebSocketMessageType.Binary, "WebSocketSend: calls SendAsync (Advanced) with client, the packet array and Binary");
+Check(WebSocketSend.Send(new object(), "c", (byte[])samePacket) is null && WebSocketSend.Problem.Length > 0, "WebSocketSend: a type without SendAsync gives null and a problem");
 FrameTrace.Listener = new ThrowingListener();
 Check(Pack(tagOwner, true, "c", 0, 0, out _, out var afterThrow, out _, tag: 9) && FramePacket.TagOf(afterThrow) == 9 && FrameTrace.ListenerFailures == 1,
     "FrameTrace: a throwing listener is counted, the packet is still built");
@@ -274,4 +290,21 @@ sealed class ThrowingListener : IFrameTraceListener
 {
     public void OnPacket(long frameId, int frameTag, double timestampMs) => throw new InvalidOperationException("listener failure");
     public void OnMessage(string kind, long frameId, int frameTag, double receivedMs, int detections) => throw new InvalidOperationException("listener failure");
+}
+
+// The shape of VL.IO.WebSocket's WebSocketServer.SendAsync (Advanced) as the VL compiler emits it.
+sealed class FakeWebSocketServer
+{
+    public string? Client;
+    public IReadOnlyList<byte>? Data;
+    public System.Net.WebSockets.WebSocketMessageType Type;
+
+    public void SendAsync(string client, IReadOnlyList<byte> data, System.Net.WebSockets.WebSocketMessageType messageType,
+        CancellationToken cancellationToken, out Task<bool> result)
+    {
+        Client = client;
+        Data = data;
+        Type = messageType;
+        result = Task.FromResult(true);
+    }
 }

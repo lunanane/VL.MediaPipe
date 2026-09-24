@@ -63,6 +63,11 @@ UPDATE_PINS = r'''
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Integer32" />
               </p:TypeAnnotation>
+            </Pin>
+            <Pin Id="@ID(pin-readbackmode)" Name="Readback Mode" Kind="InputPin" DefaultValue="NextUpdate" Summary="Source = Texture: NextUpdate reads each frame back in the next vvvv update and sends it from there (one render frame later, no wait in the draw). SameFrame sends it from the draw that rendered it, after waiting for the GPU to finish the copy: one render frame less latency, at the cost of that wait. The environment variable MP_READBACK_MODE overrides this pin.">
+              <p:TypeAnnotation LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.dll">
+                <Choice Kind="TypeFlag" Name="ReadbackMode" />
+              </p:TypeAnnotation>
             </Pin>'''
 
 # MediaPipe: canvas elements (Source sender, texture path in an If region)
@@ -71,6 +76,7 @@ CANVAS = r'''
             <ControlPoint Id="@ID(cp-texture)" Bounds="2230,110" />
             <ControlPoint Id="@ID(cp-tag)" Bounds="2340,110" />
             <ControlPoint Id="@ID(cp-maxsize)" Bounds="2450,110" />
+            <ControlPoint Id="@ID(cp-readbackmode)" Bounds="2560,110" />
             <Node Bounds="2008,160,70,19" Id="@ID(n-pagesource)">
               <p:NodeReference LastCategoryFullName="MediaPipe.FramePacket" LastDependency="VL.MediaPipe.dll">
                 <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
@@ -167,6 +173,23 @@ CANVAS = r'''
                     </Node>
                   </Patch>
                 </Node>
+                <Node Bounds="2400,322,190,19" Id="@ID(n-configure)">
+                  <p:NodeReference LastCategoryFullName="MediaPipe.TaggedTextureReadback" LastDependency="VL.MediaPipe.dll">
+                    <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                    <CategoryReference Kind="AssemblyCategory" Name="TaggedTextureReadback" NeedsToBeDirectParent="true" />
+                    <Choice Kind="OperationCallFlag" Name="Configure" />
+                  </p:NodeReference>
+                  <Pin Id="@ID(configure-input)" Name="Input" Kind="StateInputPin" />
+                  <Pin Id="@ID(configure-mode)" Name="Mode" Kind="InputPin" />
+                  <Pin Id="@ID(configure-sender)" Name="Sender" Kind="InputPin" />
+                  <Pin Id="@ID(configure-client)" Name="Client" Kind="InputPin" />
+                  <Pin Id="@ID(configure-queue)" Name="Send Queue Length" Kind="InputPin" />
+                  <Pin Id="@ID(configure-acktimeout)" Name="Ack Timeout" Kind="InputPin" DefaultValue="1000" />
+                  <Pin Id="@ID(configure-output)" Name="Output" Kind="StateOutputPin" />
+                  <Pin Id="@ID(configure-activemode)" Name="Active Mode" Kind="OutputPin" />
+                  <Pin Id="@ID(configure-waitms)" Name="Wait Ms" Kind="OutputPin" />
+                  <Pin Id="@ID(configure-problem)" Name="Problem" Kind="OutputPin" />
+                </Node>
                 <Node Bounds="2228,350,300,19" Id="@ID(n-readback)">
                   <p:NodeReference LastCategoryFullName="MediaPipe.TaggedTextureReadback" LastDependency="VL.MediaPipe.dll">
                     <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
@@ -248,6 +271,7 @@ LINKS = rf'''
           <Link Id="@ID(l-io-texture)" Ids="@ID(pin-texture),@ID(cp-texture)" IsHidden="true" />
           <Link Id="@ID(l-io-tag)" Ids="@ID(pin-tag),@ID(cp-tag)" IsHidden="true" />
           <Link Id="@ID(l-io-maxsize)" Ids="@ID(pin-maxsize),@ID(cp-maxsize)" IsHidden="true" />
+          <Link Id="@ID(l-io-readbackmode)" Ids="@ID(pin-readbackmode),@ID(cp-readbackmode)" IsHidden="true" />
           <Link Id="@ID(l-source-page)" Ids="@ID(cp-source),@ID(pagesource-source)" />
           <Link Id="@ID(l-page-ss)" Ids="@ID(pagesource-result),@ID(ss-value)" />
           <Link Id="@ID(l-this-ss)" Ids="{THIS_INSTANCE},@ID(ss-input)" />
@@ -261,7 +285,12 @@ LINKS = rf'''
           <Link Id="@ID(l-framedelay-cache)" Ids="@ID(pad-framedelay),@ID(cache-cp-framedelay)" />
           <Link Id="@ID(l-framedelay-create)" Ids="@ID(cache-cp-framedelay),@ID(readback-create-framedelay)" />
           <Link Id="@ID(l-readback-create)" Ids="@ID(readback-create-output),@ID(cache-cp-readback)" />
-          <Link Id="@ID(l-readback-state)" Ids="@ID(cache-cp-readback),@ID(readback-input)" />
+          <Link Id="@ID(l-readback-configure)" Ids="@ID(cache-cp-readback),@ID(configure-input)" />
+          <Link Id="@ID(l-configure-readback)" Ids="@ID(configure-output),@ID(readback-input)" />
+          <Link Id="@ID(l-mode-configure)" Ids="@ID(cp-readbackmode),@ID(configure-mode)" />
+          <Link Id="@ID(l-ws-configure)" Ids="{WS_OUTPUT},@ID(configure-sender)" />
+          <Link Id="@ID(l-first-configure)" Ids="@ID(first-result),@ID(configure-client)" />
+          <Link Id="@ID(l-queue-configure)" Ids="{WS_QUEUE},@ID(configure-queue)" />
           <Link Id="@ID(l-texture-readback)" Ids="@ID(cp-texture),@ID(readback-texture)" />
           <Link Id="@ID(l-size-readback)" Ids="@ID(rs-result),@ID(readback-size)" />
           <Link Id="@ID(l-tag-readback)" Ids="@ID(cp-tag),@ID(readback-frametag)" />

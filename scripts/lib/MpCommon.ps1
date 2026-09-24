@@ -6,7 +6,7 @@
 # Team rules these helpers implement (RENDERPC01, 2026-09):
 #   - Only ONE vvvv.exe / vvvvc.exe at a time across everyone on the machine: hold <dev>\vl\vvvv.lock
 #     (created with CreateNew, polled every 10 s, up to 45 min) around every run, and delete it only after every
-#     process the script started has actually exited. <dev> is Get-MpDevRoot below; VL.TrackingDepthPrepass's
+#     process the script started has actually exited. <dev> is Get-MpDevRoot below; VL.HandTracking's (formerly VL.TrackingDepthPrepass)
 #     scripts use the same lock file.
 #   - Kill only processes this script started, by PID (the vvvv process tree, recorded before killing).
 #   - Dev packages come from --package-repositories Get-MpDevRepo (as a submodule: the folder holding this repo)
@@ -21,17 +21,22 @@ function Get-MpVvvvDir {
     return 'C:\Program Files\vvvv\vvvv_gamma_7.4-0008-g793e4b395d-win-x64'
 }
 
-# The checkout this fork is a submodule of (depth-handtracking, with this repo at vvvv\VL.MediaPipe), or $null
-# standalone: a submodule's .git is a file, and the superproject two levels up has a .gitmodules.
+# The checkout this fork is a submodule of (the tracking repo, with this repo at tools\vvvv-node\VL.MediaPipe; earlier
+# vvvv\VL.MediaPipe), or $null standalone: a submodule's .git is a file, and the nearest parent folder with a
+# .gitmodules (at most 4 levels up) is the superproject.
 function Get-MpSuperproject {
     if (-not (Test-Path -LiteralPath (Join-Path $script:MpRepoRoot '.git') -PathType Leaf)) { return $null }
-    $super = Split-Path -Parent (Split-Path -Parent $script:MpRepoRoot)
-    if ($super -and (Test-Path -LiteralPath (Join-Path $super '.gitmodules'))) { return $super }
+    $dir = $script:MpRepoRoot
+    for ($i = 0; $i -lt 4; $i++) {
+        $dir = Split-Path -Parent $dir
+        if (-not $dir) { return $null }
+        if (Test-Path -LiteralPath (Join-Path $dir '.gitmodules')) { return $dir }
+    }
     return $null
 }
 
 # The machine-local dev folder (vl\nugets, vl\vvvv.lock, tools\node): the superproject's .dev folder as a
-# submodule, shared with VL.TrackingDepthPrepass's scripts (the same lock file); standalone, .dev in this repo.
+# submodule, shared with VL.HandTracking's (formerly VL.TrackingDepthPrepass) scripts (the same lock file); standalone, .dev in this repo.
 # MP_DEV_ROOT (or TDP_DEV_ROOT) overrides.
 function Get-MpDevRoot {
     if ($env:MP_DEV_ROOT) { return $env:MP_DEV_ROOT }
@@ -44,7 +49,7 @@ function Get-MpDevRoot {
 $script:MpLockPath = Join-Path (Get-MpDevRoot) 'vl\vvvv.lock'
 
 # The --package-repositories folder, whose subfolders are packages named by their id: as a submodule the folder
-# holding this repo (vvvv\); standalone, a folder of junctions in the dev folder.
+# holding this repo (tools\vvvv-node\); standalone, a folder of junctions in the dev folder.
 function Get-MpDevRepo {
     if ($env:MP_VL_DEV) { return $env:MP_VL_DEV }
     if ((Get-MpSuperproject) -and ((Split-Path -Leaf $script:MpRepoRoot) -eq 'VL.MediaPipe')) {

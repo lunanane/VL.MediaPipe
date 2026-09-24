@@ -152,7 +152,34 @@ public static class FramePacket
         var sender = s_senders.GetValue(owner, _ => new Sender());
         frameId = unchecked((int)sender.LastFrameId);
         droppedFrames = sender.DroppedFrames;
-        if (!apply || image is null || string.IsNullOrEmpty(client))
+        if (!apply || image is null)
+            return false;
+        if (!Gate(sender, frameTag, client, sendQueueLength, ackTimeout))
+        {
+            droppedFrames = sender.DroppedFrames;
+            return false;
+        }
+        return Build(sender, image, frameTag, out packet, out frameId);
+    }
+
+    /// <summary>
+    /// Pack's checks without an image: true when Pack would build a packet for a frame tagged frameTag now. A frame
+    /// refused because the previous packet is still in flight counts as dropped, as in Pack. The same-frame readback asks
+    /// this before it copies and maps a texture, so it never stalls on a frame that would not be sent.
+    /// </summary>
+    internal static bool CanSend(object owner, int frameTag, string? client, int sendQueueLength, float ackTimeout) =>
+        Gate(s_senders.GetValue(owner, _ => new Sender()), frameTag, client, sendQueueLength, ackTimeout);
+
+    /// <summary>Builds the packet Pack builds once <see cref="CanSend"/> said yes (same sender state, frame ids and tags).</summary>
+    internal static bool BuildChecked(object owner, IImage image, int frameTag, out IReadOnlyList<byte> packet, out int frameId) =>
+        Build(s_senders.GetValue(owner, _ => new Sender()), image, frameTag, out packet, out frameId);
+
+    /// <summary>Frames this sender skipped so far because the previous packet was still in flight.</summary>
+    internal static int DroppedFramesOf(object owner) => s_senders.GetValue(owner, _ => new Sender()).DroppedFrames;
+
+    private static bool Gate(Sender sender, int frameTag, string? client, int sendQueueLength, float ackTimeout)
+    {
+        if (string.IsNullOrEmpty(client))
             return false;
         if (frameTag >= 0 && frameTag == sender.LastTag)
             return false; // the readback repeats its newest image until a newer copy is read: this frame was sent
@@ -166,7 +193,7 @@ public static class FramePacket
             }
             else if (now - sender.InFlightSince < ackTimeout)
             {
-                droppedFrames = ++sender.DroppedFrames;
+                ++sender.DroppedFrames;
                 return false;
             }
             else
@@ -177,10 +204,17 @@ public static class FramePacket
         }
         if (sendQueueLength > 0)
         {
-            droppedFrames = ++sender.DroppedFrames;
+            ++sender.DroppedFrames;
             return false;
         }
+        return true;
+    }
 
+    private static bool Build(Sender sender, IImage image, int frameTag, out IReadOnlyList<byte> packet, out int frameId)
+    {
+        packet = Array.Empty<byte>();
+        frameId = unchecked((int)sender.LastFrameId);
+        var now = NowMs;
         byte[] buffer;
         var id = unchecked((uint)Interlocked.Increment(ref s_frameIdCounter));
         try

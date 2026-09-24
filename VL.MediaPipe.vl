@@ -1776,6 +1776,7 @@
             <ControlPoint Id="ZbucvQ3PWJ5oQwO0Xcz9GL" Bounds="2230,110" />
             <ControlPoint Id="Hhx94DPDjF6gEZXnryWK3h" Bounds="2340,110" />
             <ControlPoint Id="X0XCN4URJh9iWzNKRFEGHt" Bounds="2450,110" />
+            <ControlPoint Id="AotH0YhsRboJ0Ezmf3hmAe" Bounds="2560,110" />
             <Node Bounds="2008,160,70,19" Id="Ae0v9WI81JGhIaHwKw0WBm">
               <p:NodeReference LastCategoryFullName="MediaPipe.FramePacket" LastDependency="VL.MediaPipe.dll">
                 <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
@@ -1871,6 +1872,23 @@
                       <Pin Id="CoQLekf3i7AYzVUwUX5HUX" Name="Output" Kind="StateOutputPin" />
                     </Node>
                   </Patch>
+                </Node>
+                <Node Bounds="2400,322,190,19" Id="BkTUOL3BMwfoPZKrbjcHqI">
+                  <p:NodeReference LastCategoryFullName="MediaPipe.TaggedTextureReadback" LastDependency="VL.MediaPipe.dll">
+                    <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                    <CategoryReference Kind="AssemblyCategory" Name="TaggedTextureReadback" NeedsToBeDirectParent="true" />
+                    <Choice Kind="OperationCallFlag" Name="Configure" />
+                  </p:NodeReference>
+                  <Pin Id="HAdK566eVoDdhW0fPJprrk" Name="Input" Kind="StateInputPin" />
+                  <Pin Id="B1ernAMIb6k3S1sW7UqHLl" Name="Mode" Kind="InputPin" />
+                  <Pin Id="SscEyxZjRtehegwMXu1viq" Name="Sender" Kind="InputPin" />
+                  <Pin Id="BFjh9T2x1kOFP9tVyEPZ7s" Name="Client" Kind="InputPin" />
+                  <Pin Id="HdEkg9dZ4EndhOD6ps7fzO" Name="Send Queue Length" Kind="InputPin" />
+                  <Pin Id="EAu4Ak5zX314zgZabrwrlP" Name="Ack Timeout" Kind="InputPin" DefaultValue="1000" />
+                  <Pin Id="YqEKLZV6UorvJw4yShKWmL" Name="Output" Kind="StateOutputPin" />
+                  <Pin Id="Bidacwd6tV3VWoxEwXPPz8" Name="Active Mode" Kind="OutputPin" />
+                  <Pin Id="Jtsp0n4L6oDcvpG7fBuEpV" Name="Wait Ms" Kind="OutputPin" />
+                  <Pin Id="DKdo25Coo1a9fvJYJndsNz" Name="Problem" Kind="OutputPin" />
                 </Node>
                 <Node Bounds="2228,350,300,19" Id="ZLoueCAd7lrtKziq7tGPXN">
                   <p:NodeReference LastCategoryFullName="MediaPipe.TaggedTextureReadback" LastDependency="VL.MediaPipe.dll">
@@ -2029,6 +2047,7 @@
           <Link Id="OofS5oYxHWeN1s1nBHvyRM" Ids="ZHXYzXIYLfG7TXDMX5FvfQ,ZbucvQ3PWJ5oQwO0Xcz9GL" IsHidden="true" />
           <Link Id="U75VQfiUfuqnTL3zIInM9I" Ids="XZmyxH3jCiNDR7ExXun4cz,Hhx94DPDjF6gEZXnryWK3h" IsHidden="true" />
           <Link Id="BJ8991V2FKPacd170k1mB5" Ids="N9iBefkLIxePgSAiw4ZeZR,X0XCN4URJh9iWzNKRFEGHt" IsHidden="true" />
+          <Link Id="UcRx8Hu5uihpxrQuyHpS6T" Ids="Jkndrm0u9LPMZ5AzO5HwdM,AotH0YhsRboJ0Ezmf3hmAe" IsHidden="true" />
           <Link Id="Ta8TZ5zZ23rT8Td3m0sbwW" Ids="RqERwhj825jA3CJMUVDOd5,ZAuEYtRMszQcTpom7ty3qi" />
           <Link Id="QieaJJFLwIlmH6bt6lAzOc" Ids="XK1SEPZ2mXyW5Oh40vc1T7,EDHEuOXPRuFE7MtdwobqUR" />
           <Link Id="L1UjlYdyYZuMoEmXB2Kz6M" Ids="HDTqgIXrwzOMsJFk3mtzao,P2sxtjhJ5BU2SAbpf6xKM5" />
@@ -2042,7 +2061,12 @@
           <Link Id="FEfP07RIKFF473RMJplMxK" Ids="OttZuyZErYXQkZs6FSv7YA,J0vfk5YSxHqLMuI9DftK8V" />
           <Link Id="EKhm95XoCYjGiSRiRY2iLn" Ids="J0vfk5YSxHqLMuI9DftK8V,HLj4EM23bRPKh27uut6teZ" />
           <Link Id="NFVzgIntUy27bSOAnHutR4" Ids="CoQLekf3i7AYzVUwUX5HUX,N8BIeze6smVfJUy2or22Nk" />
-          <Link Id="F5UTmRWSsKuL6cN74fmdCf" Ids="N8BIeze6smVfJUy2or22Nk,EmJlRvq3cSwnO7jFFOsPfJ" />
+          <Link Id="JdUS4I2IJcZm4xgkGMaHCk" Ids="N8BIeze6smVfJUy2or22Nk,HAdK566eVoDdhW0fPJprrk" />
+          <Link Id="AhlDXmge7FmHrXzLyRRQ0N" Ids="YqEKLZV6UorvJw4yShKWmL,EmJlRvq3cSwnO7jFFOsPfJ" />
+          <Link Id="MneZFBr0ia4uo8Yw20V6J6" Ids="AotH0YhsRboJ0Ezmf3hmAe,B1ernAMIb6k3S1sW7UqHLl" />
+          <Link Id="YtIbkvc9vq17ICE4X2cSSl" Ids="Gl65k0TSkU5NhSHTPFP2nC,SscEyxZjRtehegwMXu1viq" />
+          <Link Id="C4mkFevw9tAS1nw960SsmA" Ids="BGf6Kp2dKOvbAqQlcc5I0u,BFjh9T2x1kOFP9tVyEPZ7s" />
+          <Link Id="KmxzEzlsVHmXLGXAjj0z3k" Ids="VmNNQHk7ureOZgb1L3S5ka,HdEkg9dZ4EndhOD6ps7fzO" />
           <Link Id="BU4KZbnMfWE3btt2EcyC2W" Ids="ZbucvQ3PWJ5oQwO0Xcz9GL,VKs9bkq0kVhAZOWYJWknMw" />
           <Link Id="Ij0FZZg8aTM7BaJxhqhmnu" Ids="LTuEQGzmv3TOm6UBvyIMDG,Tf1KV3LxlfiGL8SD97WVXj" />
           <Link Id="CuhzXj0eAefEWEzU85xEzK" Ids="Hhx94DPDjF6gEZXnryWK3h,EAqQbe8Zt0pgMo0yVAOEWw" />
@@ -2095,6 +2119,11 @@
             <Pin Id="N9iBefkLIxePgSAiw4ZeZR" Name="Max Input Size" Kind="InputPin" DefaultValue="0" Summary="Source = Texture: 0 sends the texture at its own size. Otherwise it is scaled down on the GPU before readback so that its longer side is at most this many pixels.">
               <p:TypeAnnotation LastCategoryFullName="Primitive" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="TypeFlag" Name="Integer32" />
+              </p:TypeAnnotation>
+            </Pin>
+            <Pin Id="Jkndrm0u9LPMZ5AzO5HwdM" Name="Readback Mode" Kind="InputPin" DefaultValue="NextUpdate" Summary="Source = Texture: NextUpdate reads each frame back in the next vvvv update and sends it from there (one render frame later, no wait in the draw). SameFrame sends it from the draw that rendered it, after waiting for the GPU to finish the copy: one render frame less latency, at the cost of that wait. The environment variable MP_READBACK_MODE overrides this pin.">
+              <p:TypeAnnotation LastCategoryFullName="MediaPipe" LastDependency="VL.MediaPipe.dll">
+                <Choice Kind="TypeFlag" Name="ReadbackMode" />
               </p:TypeAnnotation>
             </Pin>
             <Pin Id="JTixARzx4mpQaduqsbRyBs" Name="Webserver Port" Kind="InputPin" Bounds="221,90" DefaultValue="9980" Visibility="Optional" />
