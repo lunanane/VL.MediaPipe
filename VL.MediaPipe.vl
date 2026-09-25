@@ -667,6 +667,14 @@
               <Pin Id="K90wEfhoaIFPKyNzM28dqr" Name="Output" Kind="StateOutputPin" />
               <Pin Id="Qzl9xud6WxNMKJDo1Tqekh" Name="Result" Kind="OutputPin" />
             </Node>
+            <Node Bounds="41,180,75,19" Id="JRvD85EQWmGAtQPdd8r3sZ">
+              <p:NodeReference LastCategoryFullName="MediaPipe.PackageFolder" LastDependency="VL.MediaPipe.dll">
+                <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                <Choice Kind="OperationCallFlag" Name="Resolve" />
+              </p:NodeReference>
+              <Pin Id="ZCU1RCvB0ovWAkY01h8blF" Name="Package Path" Kind="InputPin" />
+              <Pin Id="MBLPYiy9epSGkI1WeSoIVE" Name="Output" Kind="OutputPin" />
+            </Node>
             <Node Bounds="124,208,60,19" Id="IreqYOEIfvnNjrwjqQXCY3">
               <p:NodeReference LastCategoryFullName="IO" LastDependency="VL.CoreLib.vl">
                 <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
@@ -2170,7 +2178,8 @@
           <Link Id="GbvEvtNo3LYMQoLIujHHKy" Ids="CEr0g69SVD5L80MWW2efzX,MxJf4uOmKwSOJjbNro6mKa" />
           <Link Id="ESy3IyZmAbXLRFOEx56Uuy" Ids="RYfTllXw1myMEuDxbJmSr9,QVzUO5WGPOaMdyP2f4cq9i" />
           <Link Id="NuWsvyj3PAUNoQoUn24GmH" Ids="IqcMmG7AjaBO4b8YfImsJ7,RGRn0ITBtH4MRpP8yjR35x" />
-          <Link Id="B1iEy8O1VDAPTG7pXI8d97" Ids="Qzl9xud6WxNMKJDo1Tqekh,HBOT9Ktv2rmO9gdfaLFYYL" />
+          <Link Id="B1iEy8O1VDAPTG7pXI8d97" Ids="Qzl9xud6WxNMKJDo1Tqekh,ZCU1RCvB0ovWAkY01h8blF" />
+          <Link Id="LgZCa8mbXRbPwj5q3eKw0h" Ids="MBLPYiy9epSGkI1WeSoIVE,HBOT9Ktv2rmO9gdfaLFYYL" />
           <Link Id="DZo17dmjSInNtdncx2Uh2c" Ids="UwsCds9TGE7PHqQWbpR0Qs,Ny4xulB0FSBNqY7YFaqpcs" />
           <Link Id="VSXp6xxAvbOP9gyYQPLrQL" Ids="MVrU2DmbUumL0c2S7I7FOy,QSpFvzWo4BpNGhO2IUdhgr" />
           <Link Id="LnR2Uu98jGWP5Mu69oGGEU" Ids="TTA5yMlgJuqL8LH8I8G6Ct,E9nPJJEcABPMM8D968AS60" />

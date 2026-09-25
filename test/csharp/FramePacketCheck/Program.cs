@@ -241,6 +241,14 @@ foreach (var frameDelay in new[] { 1, 3 })
 Check(!new TaggedReadbackRing(2).Read((_, _) => true, 5, 1, out var noTag2, out var noBlocking) && noTag2 == -1 && !noBlocking,
     "ring: nothing staged, nothing read");
 
+// ---- PackageFolder: the web root when GetPackagePath is null (VL.MediaPipe linked as a file) ------------------
+Check(PackageFolder.Resolve(@"C:\packages\VL.MediaPipe") == @"C:\packages\VL.MediaPipe", "package folder: a resolved package path passes through");
+// This check runs from a copy of the DLL outside the package, so the fallback lands on the DLL's own folder; in the
+// package it is the folder holding VL.MediaPipe.vl and web\ (lib\net8.0\VL.MediaPipe.dll, two levels up).
+var fallback = PackageFolder.Resolve(null);
+Check(!string.IsNullOrEmpty(fallback) && Directory.Exists(fallback) && PackageFolder.Resolve("") == fallback,
+    $"package folder: null or empty falls back to an existing folder ({fallback}), never null (MakePath threw on null)");
+
 Console.WriteLine(failures == 0 ? "ALL CHECKS PASSED" : $"{failures} CHECK(S) FAILED");
 return failures == 0 ? 0 : 1;
 

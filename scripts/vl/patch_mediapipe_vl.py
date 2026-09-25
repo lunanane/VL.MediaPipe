@@ -412,6 +412,26 @@ HAND_LINKS = rf'''
           <Link Id="@ID(hd-l-tag-cp)" Ids="@ID(hd-fto-tag),@ID(hd-cp-tag)" />
           <Link Id="@ID(hd-l-tag-io)" Ids="@ID(hd-cp-tag),@ID(hd-pin-tag)" IsHidden="true" />'''
 
+# ---------------------------------------------------------------------------------------------------------------
+# MediaPipe: the web root when VL.MediaPipe is linked as a file. AppHost.GetPackagePath("VL.MediaPipe") is null unless
+# vvvv knows VL.MediaPipe as a package; MakePath(null, "web") then threw every frame ("path2") and the node went pink.
+# PackageFolder.Resolve (src/PackageFolder.cs) passes a resolved path through and otherwise finds the folder that holds
+# VL.MediaPipe.vl and web/ above the loaded DLL. It sits between GetPackagePath's Result and MakePath's Input.
+GET_PACKAGE_PATH_RESULT = "Qzl9xud6WxNMKJDo1Tqekh"
+MAKE_PATH_INPUT = "HBOT9Ktv2rmO9gdfaLFYYL"
+PACKAGE_PATH_LINK = f'<Link Id="B1iEy8O1VDAPTG7pXI8d97" Ids="{GET_PACKAGE_PATH_RESULT},{MAKE_PATH_INPUT}" />'
+PACKAGE_FOLDER_NODE = r'''
+            <Node Bounds="41,180,75,19" Id="@ID(pf-node)">
+              <p:NodeReference LastCategoryFullName="MediaPipe.PackageFolder" LastDependency="VL.MediaPipe.dll">
+                <Choice Kind="NodeFlag" Name="Node" Fixed="true" />
+                <Choice Kind="OperationCallFlag" Name="Resolve" />
+              </p:NodeReference>
+              <Pin Id="@ID(pf-in)" Name="Package Path" Kind="InputPin" />
+              <Pin Id="@ID(pf-out)" Name="Output" Kind="OutputPin" />
+            </Node>'''
+PACKAGE_FOLDER_LINKS = (f'<Link Id="B1iEy8O1VDAPTG7pXI8d97" Ids="{GET_PACKAGE_PATH_RESULT},@ID(pf-in)" />\n'
+                        f'          <Link Id="@ID(pf-l-out)" Ids="@ID(pf-out),{MAKE_PATH_INPUT}" />')
+
 
 class Doc:
     def __init__(self, text: str):
@@ -465,6 +485,9 @@ def build(base_text: str) -> str:
     doc.insert_after_line('<ControlPoint Id="TJjUBp4qIcQOrTl9taSiZU" Bounds="330,819" />', HAND_CANVAS)
     doc.insert_after_line('<Pin Id="E2HQCAWRudwNYXiZzgUR0k" Name="World Landmarks" Kind="OutputPin" Bounds="304,751" />', HAND_PINS)
     doc.insert_after_line(f'<Link Id="Cmt1vJRwogyLGjU5QE0SS5" Ids="{GET_HANDS_VALUE},RZLSdyvBABkLzfgLI5jw9P" />', HAND_LINKS)
+    # MediaPipe: the web root without a package registration (PackageFolder.Resolve)
+    doc.insert_before_line('<Node Bounds="124,208,60,19" Id="IreqYOEIfvnNjrwjqQXCY3">', PACKAGE_FOLDER_NODE)
+    doc.replace_once(PACKAGE_PATH_LINK, expand(PACKAGE_FOLDER_LINKS))
     # Document
     doc.insert_after_line('<NugetDependency Id="NUSiv3FPG3gMWwRu79ffAI" Location="VL.IO.WebServer" Version="1.0.1" />', DEPENDENCY)
     doc.replace_once(CEF_UPSTREAM, CEF_LIMINAL)
